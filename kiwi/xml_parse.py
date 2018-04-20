@@ -2400,9 +2400,10 @@ class size(GeneratedsSuper):
     required size of the image"""
     subclass = None
     superclass = None
-    def __init__(self, unit=None, additive=None, valueOf_=None):
+    def __init__(self, unit=None, unpartitioned=None, additive=None, valueOf_=None):
         self.original_tagname_ = None
         self.unit = _cast(None, unit)
+        self.unpartitioned = _cast(int, unpartitioned)
         self.additive = _cast(bool, additive)
         self.valueOf_ = valueOf_
     def factory(*args_, **kwargs_):
@@ -2418,6 +2419,8 @@ class size(GeneratedsSuper):
     factory = staticmethod(factory)
     def get_unit(self): return self.unit
     def set_unit(self, unit): self.unit = unit
+    def get_unpartitioned(self): return self.unpartitioned
+    def set_unpartitioned(self, unpartitioned): self.unpartitioned = unpartitioned
     def get_additive(self): return self.additive
     def set_additive(self, additive): self.additive = additive
     def get_valueOf_(self): return self.valueOf_
@@ -2454,6 +2457,9 @@ class size(GeneratedsSuper):
         if self.unit is not None and 'unit' not in already_processed:
             already_processed.add('unit')
             outfile.write(' unit=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.unit), input_name='unit')), ))
+        if self.unpartitioned is not None and 'unpartitioned' not in already_processed:
+            already_processed.add('unpartitioned')
+            outfile.write(' unpartitioned="%s"' % self.gds_format_integer(self.unpartitioned, input_name='unpartitioned'))
         if self.additive is not None and 'additive' not in already_processed:
             already_processed.add('additive')
             outfile.write(' additive="%s"' % self.gds_format_boolean(self.additive, input_name='additive'))
@@ -2473,6 +2479,15 @@ class size(GeneratedsSuper):
             already_processed.add('unit')
             self.unit = value
             self.unit = ' '.join(self.unit.split())
+        value = find_attr_value_('unpartitioned', node)
+        if value is not None and 'unpartitioned' not in already_processed:
+            already_processed.add('unpartitioned')
+            try:
+                self.unpartitioned = int(value)
+            except ValueError as exp:
+                raise_parse_error(node, 'Bad integer attribute: %s' % exp)
+            if self.unpartitioned < 0:
+                raise_parse_error(node, 'Invalid NonNegativeInteger')
         value = find_attr_value_('additive', node)
         if value is not None and 'additive' not in already_processed:
             already_processed.add('additive')

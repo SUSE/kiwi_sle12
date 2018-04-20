@@ -16,11 +16,11 @@ class TestXMLState(object):
     @patch('platform.machine')
     def setup(self, mock_machine):
         mock_machine.return_value = 'x86_64'
-        description = XMLDescription(
+        self.description = XMLDescription(
             '../data/example_config.xml'
         )
         self.state = XMLState(
-            description.load()
+            self.description.load()
         )
         boot_description = XMLDescription(
             '../data/isoboot/example-distribution/config.xml'
@@ -80,11 +80,8 @@ class TestXMLState(object):
     @patch('platform.machine')
     def test_get_system_packages_some_arch(self, mock_machine):
         mock_machine.return_value = 's390'
-        description = XMLDescription(
-            '../data/example_config.xml'
-        )
         state = XMLState(
-            description.load()
+            self.description.load()
         )
         assert state.get_system_packages() == [
             'foo',
@@ -217,21 +214,18 @@ class TestXMLState(object):
         assert state.get_volume_management() == 'lvm'
 
     def test_build_type_explicitly_selected(self):
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         state = XMLState(xml_data, ['vmxFlavour'], 'vmx')
         assert state.get_build_type_name() == 'vmx'
 
     @raises(KiwiTypeNotFound)
     def test_build_type_not_found(self):
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         XMLState(xml_data, ['vmxFlavour'], 'foo')
 
     @raises(KiwiProfileNotFound)
     def test_profile_not_found(self):
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         XMLState(xml_data, ['foo'])
 
     def test_get_volumes(self):
@@ -341,8 +335,7 @@ class TestXMLState(object):
         assert self.state.get_strip_libraries_to_keep() == ['lib-a', 'lib-b']
 
     def test_get_build_type_machine_section(self):
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         state = XMLState(xml_data, None, 'vmx')
         assert state.get_build_type_machine_section().get_guestOS() == 'suse'
 
@@ -358,8 +351,7 @@ class TestXMLState(object):
             ['crypto/*', 'drivers/acpi/*', 'bar']
 
     def test_get_build_type_oemconfig_section(self):
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         state = XMLState(xml_data, None, 'oem')
         assert state.get_build_type_oemconfig_section().get_oem_swap()[0] is \
             True
@@ -484,6 +476,22 @@ class TestXMLState(object):
         assert result.mbytes == 1024
         assert result.additive
 
+    def test_build_type_size_with_unpartitioned(self):
+        state = XMLState(self.description.load(), ['vmxFlavour'], 'vmx')
+        result = state.get_build_type_size()
+        assert result.mbytes == 3072
+        assert not result.additive
+        result = state.get_build_type_size(include_unpartitioned=True)
+        assert result.mbytes == 4096
+        assert not result.additive
+
+    def test_get_build_type_unpartitioned_mbytes(self):
+        assert self.state.get_build_type_unpartitioned_mbytes() == 0
+        state = XMLState(self.description.load(), ['vmxFlavour'], 'vmx')
+        assert state.get_build_type_unpartitioned_mbytes() == 1024
+        state = XMLState(self.description.load(), ['vmxFlavour'], 'oem')
+        assert state.get_build_type_unpartitioned_mbytes() == 0
+
     def test_get_volume_group_name(self):
         assert self.state.get_volume_group_name() == 'mydisk'
 
@@ -523,8 +531,7 @@ class TestXMLState(object):
         assert self.state.get_build_type_vmconfig_entries() == []
 
     def test_get_build_type_vmconfig_entries_for_vmx_type(self):
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         state = XMLState(xml_data, ['vmxFlavour'], 'vmx')
         assert state.get_build_type_vmconfig_entries() == [
             'numvcpus = "4"', 'cpuid.coresPerSocket = "2"'
@@ -537,8 +544,7 @@ class TestXMLState(object):
         assert state.get_build_type_vmconfig_entries() == []
 
     def test_get_build_type_docker_containerconfig_section(self):
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         state = XMLState(xml_data, ['vmxFlavour'], 'docker')
         containerconfig = state.get_build_type_containerconfig_section()
         assert containerconfig.get_name() == \
@@ -549,8 +555,7 @@ class TestXMLState(object):
             '/root'
 
     def test_set_container_tag(self):
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         state = XMLState(xml_data, ['vmxFlavour'], 'docker')
         state.set_container_config_tag('new_tag')
         config = state.get_container_config()
@@ -593,8 +598,7 @@ class TestXMLState(object):
                 '--config.exposedports=8080'
             ]
         }
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         state = XMLState(xml_data, ['vmxFlavour'], 'docker')
         assert state.get_container_config() == expected_config
 
@@ -612,8 +616,7 @@ class TestXMLState(object):
                 '--clear=config.entrypoint',
             ]
         }
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         state = XMLState(xml_data, ['derivedContainer'], 'docker')
         assert state.get_container_config() == expected_config
 
@@ -627,15 +630,13 @@ class TestXMLState(object):
         }
 
     def test_get_derived_from_image_uri(self):
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         state = XMLState(xml_data, ['derivedContainer'], 'docker')
         assert state.get_derived_from_image_uri().uri == \
             'obs://project/repo/image#mytag'
 
     def test_set_derived_from_image_uri(self):
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         state = XMLState(xml_data, ['derivedContainer'], 'docker')
         state.set_derived_from_image_uri('file:///new_uri')
         assert state.get_derived_from_image_uri().translate() == '/new_uri'
@@ -652,13 +653,11 @@ class TestXMLState(object):
         assert self.state.is_xen_guest() is True
 
     def test_is_xen_guest_by_firmware_setup(self):
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         state = XMLState(xml_data, ['ec2Flavour'], 'vmx')
         assert state.is_xen_guest() is True
 
     def test_get_initrd_system(self):
-        description = XMLDescription('../data/example_config.xml')
-        xml_data = description.load()
+        xml_data = self.description.load()
         state = XMLState(xml_data, ['vmxFlavour'], 'vmx')
         assert state.get_initrd_system() == 'dracut'
