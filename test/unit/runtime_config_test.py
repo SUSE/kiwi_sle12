@@ -83,7 +83,7 @@ class TestRuntimeConfig(object):
     def test_get_iso_tool_category_default(self):
         with patch.dict('os.environ', {'HOME': './'}):
             runtime_config = RuntimeConfig()
-            assert runtime_config.get_iso_tool_category() == 'xorriso'
+            assert runtime_config.get_iso_tool_category() == 'cdrtools'
 
     @patch.object(RuntimeConfig, '_get_attribute')
     @patch('kiwi.logger.log.warning')
@@ -91,7 +91,7 @@ class TestRuntimeConfig(object):
         self, mock_warning, mock_get_attribute
     ):
         mock_get_attribute.return_value = 'foo'
-        assert self.runtime_config.get_iso_tool_category() == 'xorriso'
+        assert self.runtime_config.get_iso_tool_category() == 'cdrtools'
         mock_warning.assert_called_once_with(
             'Skipping invalid iso tool category: foo'
         )

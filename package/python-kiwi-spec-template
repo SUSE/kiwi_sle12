@@ -133,7 +133,7 @@ Requires:       gdisk
 %endif
 Requires:       dosfstools
 Requires:       e2fsprogs
-Requires:       xorriso
+Requires:       genisoimage
 Requires:       grub2
 Requires:       kiwi-man-pages
 Requires:       kiwi-tools
@@ -206,7 +206,7 @@ Provides:       kiwi-packagemanager:zypper
 %endif
 Requires:       dosfstools
 Requires:       e2fsprogs
-Requires:       xorriso
+Requires:       genisoimage
 Requires:       grub2
 Requires:       kiwi-man-pages
 Requires:       kiwi-tools
@@ -368,7 +368,7 @@ Requires:       dmsetup
 Requires:       device-mapper
 %endif
 Requires:       dracut
-Requires:       xorriso
+Requires:       genisoimage
 License:        GPL-3.0-or-later
 Group:          %{sysgroup}
 
