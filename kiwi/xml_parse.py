@@ -2732,7 +2732,7 @@ class type_(GeneratedsSuper):
     """The Image Type of the Logical Extend"""
     subclass = None
     superclass = None
-    def __init__(self, boot=None, bootfilesystem=None, firmware=None, bootkernel=None, bootloader=None, bootloader_console=None, zipl_targettype=None, bootpartition=None, bootpartsize=None, efipartsize=None, efiparttable=None, bootprofile=None, boottimeout=None, btrfs_quota_groups=None, btrfs_root_is_snapshot=None, btrfs_root_is_readonly_snapshot=None, compressed=None, devicepersistency=None, editbootconfig=None, editbootinstall=None, filesystem=None, flags=None, format=None, formatoptions=None, fsmountoptions=None, gcelicense=None, hybridpersistent=None, hybridpersistent_filesystem=None, gpt_hybrid_mbr=None, force_mbr=None, initrd_system=None, image=None, installboot=None, installprovidefailsafe=None, installiso=None, installstick=None, installpxe=None, mediacheck=None, kernelcmdline=None, luks=None, luksOS=None, mdraid=None, overlayroot=None, primary=None, ramonly=None, rootfs_label=None, spare_part=None, target_blocksize=None, target_removable=None, vga=None, vhdfixedtag=None, volid=None, wwid_wait_timeout=None, derived_from=None, xen_server=None, publisher=None, disk_start_sector=None, containerconfig=None, machine=None, oemconfig=None, pxedeploy=None, size=None, systemdisk=None, vagrantconfig=None):
+    def __init__(self, boot=None, bootfilesystem=None, firmware=None, bootkernel=None, bootloader=None, bootloader_console=None, zipl_targettype=None, bootpartition=None, bootpartsize=None, efipartsize=None, efiparttable=None, bootprofile=None, boottimeout=None, btrfs_quota_groups=None, btrfs_root_is_snapshot=None, btrfs_root_is_readonly_snapshot=None, compressed=None, devicepersistency=None, editbootconfig=None, editbootinstall=None, filesystem=None, flags=None, format=None, formatoptions=None, fsmountoptions=None, gcelicense=None, hybridpersistent=None, hybridpersistent_filesystem=None, gpt_hybrid_mbr=None, force_mbr=None, initrd_system=None, image=None, installboot=None, install_continue_on_timeout=None, installprovidefailsafe=None, installiso=None, installstick=None, installpxe=None, mediacheck=None, kernelcmdline=None, luks=None, luksOS=None, mdraid=None, overlayroot=None, primary=None, ramonly=None, rootfs_label=None, spare_part=None, target_blocksize=None, target_removable=None, vga=None, vhdfixedtag=None, volid=None, wwid_wait_timeout=None, derived_from=None, xen_server=None, publisher=None, disk_start_sector=None, containerconfig=None, machine=None, oemconfig=None, pxedeploy=None, size=None, systemdisk=None, vagrantconfig=None):
         self.original_tagname_ = None
         self.boot = _cast(None, boot)
         self.bootfilesystem = _cast(None, bootfilesystem)
@@ -2767,6 +2767,7 @@ class type_(GeneratedsSuper):
         self.initrd_system = _cast(None, initrd_system)
         self.image = _cast(None, image)
         self.installboot = _cast(None, installboot)
+        self.install_continue_on_timeout = _cast(bool, install_continue_on_timeout)
         self.installprovidefailsafe = _cast(bool, installprovidefailsafe)
         self.installiso = _cast(bool, installiso)
         self.installstick = _cast(bool, installstick)
@@ -2931,6 +2932,8 @@ class type_(GeneratedsSuper):
     def set_image(self, image): self.image = image
     def get_installboot(self): return self.installboot
     def set_installboot(self, installboot): self.installboot = installboot
+    def get_install_continue_on_timeout(self): return self.install_continue_on_timeout
+    def set_install_continue_on_timeout(self, install_continue_on_timeout): self.install_continue_on_timeout = install_continue_on_timeout
     def get_installprovidefailsafe(self): return self.installprovidefailsafe
     def set_installprovidefailsafe(self, installprovidefailsafe): self.installprovidefailsafe = installprovidefailsafe
     def get_installiso(self): return self.installiso
@@ -3134,6 +3137,9 @@ class type_(GeneratedsSuper):
         if self.installboot is not None and 'installboot' not in already_processed:
             already_processed.add('installboot')
             outfile.write(' installboot=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.installboot), input_name='installboot')), ))
+        if self.install_continue_on_timeout is not None and 'install_continue_on_timeout' not in already_processed:
+            already_processed.add('install_continue_on_timeout')
+            outfile.write(' install_continue_on_timeout="%s"' % self.gds_format_boolean(self.install_continue_on_timeout, input_name='install_continue_on_timeout'))
         if self.installprovidefailsafe is not None and 'installprovidefailsafe' not in already_processed:
             already_processed.add('installprovidefailsafe')
             outfile.write(' installprovidefailsafe="%s"' % self.gds_format_boolean(self.installprovidefailsafe, input_name='installprovidefailsafe'))
@@ -3434,6 +3440,15 @@ class type_(GeneratedsSuper):
             already_processed.add('installboot')
             self.installboot = value
             self.installboot = ' '.join(self.installboot.split())
+        value = find_attr_value_('install_continue_on_timeout', node)
+        if value is not None and 'install_continue_on_timeout' not in already_processed:
+            already_processed.add('install_continue_on_timeout')
+            if value in ('true', '1'):
+                self.install_continue_on_timeout = True
+            elif value in ('false', '0'):
+                self.install_continue_on_timeout = False
+            else:
+                raise_parse_error(node, 'Bad boolean attribute')
         value = find_attr_value_('installprovidefailsafe', node)
         if value is not None and 'installprovidefailsafe' not in already_processed:
             already_processed.add('installprovidefailsafe')
@@ -4865,7 +4880,7 @@ class containerconfig(GeneratedsSuper):
     useful container information."""
     subclass = None
     superclass = None
-    def __init__(self, name=None, tag=None, additionaltags=None, maintainer=None, user=None, workingdir=None, entrypoint=None, subcommand=None, expose=None, volumes=None, environment=None, labels=None):
+    def __init__(self, name=None, tag=None, additionaltags=None, maintainer=None, user=None, workingdir=None, entrypoint=None, subcommand=None, expose=None, volumes=None, environment=None, labels=None, history=None):
         self.original_tagname_ = None
         self.name = _cast(None, name)
         self.tag = _cast(None, tag)
@@ -4897,6 +4912,10 @@ class containerconfig(GeneratedsSuper):
             self.labels = []
         else:
             self.labels = labels
+        if history is None:
+            self.history = []
+        else:
+            self.history = history
     def factory(*args_, **kwargs_):
         if CurrentSubclassModule_ is not None:
             subclass = getSubclassFromModule_(
@@ -4938,6 +4957,11 @@ class containerconfig(GeneratedsSuper):
     def add_labels(self, value): self.labels.append(value)
     def insert_labels_at(self, index, value): self.labels.insert(index, value)
     def replace_labels_at(self, index, value): self.labels[index] = value
+    def get_history(self): return self.history
+    def set_history(self, history): self.history = history
+    def add_history(self, value): self.history.append(value)
+    def insert_history_at(self, index, value): self.history.insert(index, value)
+    def replace_history_at(self, index, value): self.history[index] = value
     def get_name(self): return self.name
     def set_name(self, name): self.name = name
     def get_tag(self): return self.tag
@@ -4957,7 +4981,8 @@ class containerconfig(GeneratedsSuper):
             self.expose or
             self.volumes or
             self.environment or
-            self.labels
+            self.labels or
+            self.history
         ):
             return True
         else:
@@ -5019,6 +5044,8 @@ class containerconfig(GeneratedsSuper):
             environment_.export(outfile, level, namespace_, name_='environment', pretty_print=pretty_print)
         for labels_ in self.labels:
             labels_.export(outfile, level, namespace_, name_='labels', pretty_print=pretty_print)
+        for history_ in self.history:
+            history_.export(outfile, level, namespace_, name_='history', pretty_print=pretty_print)
     def build(self, node):
         already_processed = set()
         self.buildAttributes(node, node.attrib, already_processed)
@@ -5082,6 +5109,11 @@ class containerconfig(GeneratedsSuper):
             obj_.build(child_)
             self.labels.append(obj_)
             obj_.original_tagname_ = 'labels'
+        elif nodeName_ == 'history':
+            obj_ = history.factory()
+            obj_.build(child_)
+            self.history.append(obj_)
+            obj_.original_tagname_ = 'history'
 # end class containerconfig
 
 
@@ -5458,7 +5490,7 @@ class port(GeneratedsSuper):
     superclass = None
     def __init__(self, number=None):
         self.original_tagname_ = None
-        self.number = _cast(int, number)
+        self.number = _cast(None, number)
     def factory(*args_, **kwargs_):
         if CurrentSubclassModule_ is not None:
             subclass = getSubclassFromModule_(
@@ -5472,6 +5504,13 @@ class port(GeneratedsSuper):
     factory = staticmethod(factory)
     def get_number(self): return self.number
     def set_number(self, number): self.number = number
+    def validate_portnum_type(self, value):
+        # Validate type portnum-type, a restriction on xs:token.
+        if value is not None and Validate_simpletypes_:
+            if not self.gds_validate_simple_patterns(
+                    self.validate_portnum_type_patterns_, value):
+                warnings_.warn('Value "%s" does not match xsd pattern restrictions: %s' % (value.encode('utf-8'), self.validate_portnum_type_patterns_, ))
+    validate_portnum_type_patterns_ = [['^(\\d+$|^\\d+/(udp$|^tcp))$']]
     def hasContent_(self):
         if (
 
@@ -5502,7 +5541,7 @@ class port(GeneratedsSuper):
     def exportAttributes(self, outfile, level, already_processed, namespace_='', name_='port'):
         if self.number is not None and 'number' not in already_processed:
             already_processed.add('number')
-            outfile.write(' number="%s"' % self.gds_format_integer(self.number, input_name='number'))
+            outfile.write(' number=%s' % (quote_attrib(self.number), ))
     def exportChildren(self, outfile, level, namespace_='', name_='port', fromsubclass_=False, pretty_print=True):
         pass
     def build(self, node):
@@ -5516,12 +5555,9 @@ class port(GeneratedsSuper):
         value = find_attr_value_('number', node)
         if value is not None and 'number' not in already_processed:
             already_processed.add('number')
-            try:
-                self.number = int(value)
-            except ValueError as exp:
-                raise_parse_error(node, 'Bad integer attribute: %s' % exp)
-            if self.number < 0:
-                raise_parse_error(node, 'Invalid NonNegativeInteger')
+            self.number = value
+            self.number = ' '.join(self.number.split())
+            self.validate_portnum_type(self.number)    # validate type portnum-type
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
         pass
 # end class port
@@ -5931,6 +5967,107 @@ class label(GeneratedsSuper):
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
         pass
 # end class label
+
+
+class history(GeneratedsSuper):
+    """Provides details about the container history. Includes the 'created
+    by', 'author' as attributes and its content represents the
+    'comment' entry."""
+    subclass = None
+    superclass = None
+    def __init__(self, created_by=None, author=None, valueOf_=None, mixedclass_=None, content_=None):
+        self.original_tagname_ = None
+        self.created_by = _cast(None, created_by)
+        self.author = _cast(None, author)
+        self.valueOf_ = valueOf_
+        if mixedclass_ is None:
+            self.mixedclass_ = MixedContainer
+        else:
+            self.mixedclass_ = mixedclass_
+        if content_ is None:
+            self.content_ = []
+        else:
+            self.content_ = content_
+        self.valueOf_ = valueOf_
+    def factory(*args_, **kwargs_):
+        if CurrentSubclassModule_ is not None:
+            subclass = getSubclassFromModule_(
+                CurrentSubclassModule_, history)
+            if subclass is not None:
+                return subclass(*args_, **kwargs_)
+        if history.subclass:
+            return history.subclass(*args_, **kwargs_)
+        else:
+            return history(*args_, **kwargs_)
+    factory = staticmethod(factory)
+    def get_created_by(self): return self.created_by
+    def set_created_by(self, created_by): self.created_by = created_by
+    def get_author(self): return self.author
+    def set_author(self, author): self.author = author
+    def get_valueOf_(self): return self.valueOf_
+    def set_valueOf_(self, valueOf_): self.valueOf_ = valueOf_
+    def hasContent_(self):
+        if (
+            (1 if type(self.valueOf_) in [int,float] else self.valueOf_)
+        ):
+            return True
+        else:
+            return False
+    def export(self, outfile, level, namespace_='', name_='history', namespacedef_='', pretty_print=True):
+        imported_ns_def_ = GenerateDSNamespaceDefs_.get('history')
+        if imported_ns_def_ is not None:
+            namespacedef_ = imported_ns_def_
+        if pretty_print:
+            eol_ = '\n'
+        else:
+            eol_ = ''
+        if self.original_tagname_ is not None:
+            name_ = self.original_tagname_
+        showIndent(outfile, level, pretty_print)
+        outfile.write('<%s%s%s' % (namespace_, name_, namespacedef_ and ' ' + namespacedef_ or '', ))
+        already_processed = set()
+        self.exportAttributes(outfile, level, already_processed, namespace_, name_='history')
+        outfile.write('>')
+        self.exportChildren(outfile, level + 1, namespace_, name_, pretty_print=pretty_print)
+        outfile.write(self.convert_unicode(self.valueOf_))
+        outfile.write('</%s%s>%s' % (namespace_, name_, eol_))
+    def exportAttributes(self, outfile, level, already_processed, namespace_='', name_='history'):
+        if self.created_by is not None and 'created_by' not in already_processed:
+            already_processed.add('created_by')
+            outfile.write(' created_by=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.created_by), input_name='created_by')), ))
+        if self.author is not None and 'author' not in already_processed:
+            already_processed.add('author')
+            outfile.write(' author=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.author), input_name='author')), ))
+    def exportChildren(self, outfile, level, namespace_='', name_='history', fromsubclass_=False, pretty_print=True):
+        pass
+    def build(self, node):
+        already_processed = set()
+        self.buildAttributes(node, node.attrib, already_processed)
+        self.valueOf_ = get_all_text_(node)
+        if node.text is not None:
+            obj_ = self.mixedclass_(MixedContainer.CategoryText,
+                MixedContainer.TypeNone, '', node.text)
+            self.content_.append(obj_)
+        for child in node:
+            nodeName_ = Tag_pattern_.match(child.tag).groups()[-1]
+            self.buildChildren(child, node, nodeName_)
+        return self
+    def buildAttributes(self, node, attrs, already_processed):
+        value = find_attr_value_('created_by', node)
+        if value is not None and 'created_by' not in already_processed:
+            already_processed.add('created_by')
+            self.created_by = value
+        value = find_attr_value_('author', node)
+        if value is not None and 'author' not in already_processed:
+            already_processed.add('author')
+            self.author = value
+    def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
+        if not fromsubclass_ and child_.tail is not None:
+            obj_ = self.mixedclass_(MixedContainer.CategoryText,
+                MixedContainer.TypeNone, '', child_.tail)
+            self.content_.append(obj_)
+        pass
+# end class history
 
 
 class oemconfig(GeneratedsSuper):
@@ -7688,6 +7825,7 @@ __all__ = [
     "expose",
     "extension",
     "file",
+    "history",
     "ignore",
     "image",
     "k_source",

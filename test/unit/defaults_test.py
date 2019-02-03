@@ -78,7 +78,7 @@ class TestDefaults(object):
         assert Defaults.get_live_dracut_module_from_flag('overlay') == \
             'kiwi-live'
         assert Defaults.get_live_dracut_module_from_flag('dmsquash') == \
-            'dmsquash-live'
+            'dmsquash-live livenet'
 
     @patch('platform.machine')
     def test_get_iso_boot_path(self, mock_machine):
@@ -89,7 +89,7 @@ class TestDefaults(object):
 
     @patch('kiwi.defaults.glob.iglob')
     def test_get_unsigned_grub_loader(self, mock_glob):
-        mock_glob.return_value = ['/usr/lib/grub2/x86_64-efi/grub.efi']
+        mock_glob.return_value = ['/usr/share/grub2/x86_64-efi/grub.efi']
         assert Defaults.get_unsigned_grub_loader('root') == \
             mock_glob.return_value.pop()
-        mock_glob.assert_called_once_with('root/usr/lib/grub*/*-efi/grub.efi')
+        mock_glob.assert_called_once_with('root/usr/share/grub*/*-efi/grub.efi')

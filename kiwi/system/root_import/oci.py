@@ -22,10 +22,10 @@ import os
 from kiwi.system.root_import.base import RootImportBase
 from kiwi.logger import log
 from kiwi.path import Path
-from kiwi.utils.sync import DataSync
 from kiwi.command import Command
 from kiwi.archive.tar import ArchiveTar
 from kiwi.defaults import Defaults
+from kiwi.oci_tools import OCI
 
 
 class RootImportOCI(RootImportBase):
@@ -38,11 +38,9 @@ class RootImportOCI(RootImportBase):
         Post initialization method
         """
         self.uncompressed_image = None
-        self.oci_unpack_dir = None
         self.oci_layout_dir = None
         self.tag = image_uri.get_fragment()
         self.oci_layout_dir = mkdtemp(prefix='kiwi_layout_dir.')
-        self.oci_unpack_dir = mkdtemp(prefix='kiwi_unpack_dir.')
 
     def sync_data(self):
         """
@@ -50,16 +48,10 @@ class RootImportOCI(RootImportBase):
         directory.
         """
         self.extract_oci_image()
-        Command.run([
-            'umoci', 'unpack', '--image',
-            '{0}:base_layer'.format(self.oci_layout_dir), self.oci_unpack_dir
-        ])
 
-        synchronizer = DataSync(
-            os.sep.join([self.oci_unpack_dir, 'rootfs', '']),
-            ''.join([self.root_dir, os.sep])
-        )
-        synchronizer.sync_data(options=['-a', '-H', '-X', '-A'])
+        oci = OCI('base_layer', self.oci_layout_dir)
+        oci.unpack()
+        oci.import_rootfs(self.root_dir)
 
         # A copy of the uncompressed image and its checksum are
         # kept inside the root_dir in order to ensure the later steps
@@ -98,8 +90,6 @@ class RootImportOCI(RootImportBase):
     def __del__(self):
         if self.oci_layout_dir:
             Path.wipe(self.oci_layout_dir)
-        if self.oci_unpack_dir:
-            Path.wipe(self.oci_unpack_dir)
-        if (self.uncompressed_image is not None and
-                self.uncompressed_image != self.image_file):
-            Path.wipe(self.uncompressed_image)
+        if self.uncompressed_image:
+            if self.uncompressed_image != self.image_file:
+                Path.wipe(self.uncompressed_image)

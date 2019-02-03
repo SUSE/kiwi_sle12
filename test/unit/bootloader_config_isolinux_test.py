@@ -44,6 +44,9 @@ class TestBootLoaderConfigIsoLinux(object):
         self.state.build_type.get_boottimeout = mock.Mock(
             return_value=None
         )
+        self.state.build_type.get_install_continue_on_timeout = mock.Mock(
+            return_value=None
+        )
         self.state.get_initrd_system = mock.Mock(
             return_value='dracut'
         )
@@ -150,7 +153,7 @@ class TestBootLoaderConfigIsoLinux(object):
 
         self.bootloader.setup_install_image_config(mbrid=None)
         self.isolinux.get_install_template.assert_called_once_with(
-            True, False, None
+            True, False, None, True
         )
         self.isolinux.get_install_message_template.assert_called_once_with()
         assert template_cfg.substitute.called
@@ -161,7 +164,7 @@ class TestBootLoaderConfigIsoLinux(object):
 
         self.bootloader.setup_install_image_config(mbrid=None)
         self.isolinux.get_multiboot_install_template.assert_called_once_with(
-            True, False, None
+            True, False, None, True
         )
 
     @patch('os.path.exists')
@@ -170,7 +173,7 @@ class TestBootLoaderConfigIsoLinux(object):
 
         self.bootloader.setup_install_image_config(mbrid=None)
         self.isolinux.get_install_template.assert_called_once_with(
-            True, True, None
+            True, True, None, True
         )
 
     @raises(KiwiTemplateError)
@@ -201,11 +204,19 @@ class TestBootLoaderConfigIsoLinux(object):
                 'root_dir/image/loader/'
             ),
             call(
+                'root_dir/usr/lib/ISOLINUX/isolinux.bin',
+                'root_dir/image/loader/'
+            ),
+            call(
                 'root_dir/usr/share/syslinux/ldlinux.c32',
                 'root_dir/image/loader/'
             ),
             call(
                 'root_dir/usr/lib/syslinux/modules/bios/ldlinux.c32',
+                'root_dir/image/loader/'
+            ),
+            call(
+                'root_dir/usr/lib/ISOLINUX/ldlinux.c32',
                 'root_dir/image/loader/'
             ),
             call(
@@ -217,11 +228,19 @@ class TestBootLoaderConfigIsoLinux(object):
                 'root_dir/image/loader/'
             ),
             call(
+                'root_dir/usr/lib/ISOLINUX/libcom32.c32',
+                'root_dir/image/loader/'
+            ),
+            call(
                 'root_dir/usr/share/syslinux/libutil.c32',
                 'root_dir/image/loader/'
             ),
             call(
                 'root_dir/usr/lib/syslinux/modules/bios/libutil.c32',
+                'root_dir/image/loader/'
+            ),
+            call(
+                'root_dir/usr/lib/ISOLINUX/libutil.c32',
                 'root_dir/image/loader/'
             ),
             call(
@@ -233,11 +252,19 @@ class TestBootLoaderConfigIsoLinux(object):
                 'root_dir/image/loader/'
             ),
             call(
+                'root_dir/usr/lib/ISOLINUX/gfxboot.c32',
+                'root_dir/image/loader/'
+            ),
+            call(
                 'root_dir/usr/share/syslinux/gfxboot.com',
                 'root_dir/image/loader/'
             ),
             call(
                 'root_dir/usr/lib/syslinux/modules/bios/gfxboot.com',
+                'root_dir/image/loader/'
+            ),
+            call(
+                'root_dir/usr/lib/ISOLINUX/gfxboot.com',
                 'root_dir/image/loader/'
             ),
             call(
@@ -249,11 +276,19 @@ class TestBootLoaderConfigIsoLinux(object):
                 'root_dir/image/loader/'
             ),
             call(
+                'root_dir/usr/lib/ISOLINUX/menu.c32',
+                'root_dir/image/loader/'
+            ),
+            call(
                 'root_dir/usr/share/syslinux/chain.c32',
                 'root_dir/image/loader/'
             ),
             call(
                 'root_dir/usr/lib/syslinux/modules/bios/chain.c32',
+                'root_dir/image/loader/'
+            ),
+            call(
+                'root_dir/usr/lib/ISOLINUX/chain.c32',
                 'root_dir/image/loader/'
             ),
             call(
@@ -263,20 +298,24 @@ class TestBootLoaderConfigIsoLinux(object):
             call(
                 'root_dir/usr/lib/syslinux/modules/bios/mboot.c32',
                 'root_dir/image/loader/'
+            ),
+            call(
+                'root_dir/usr/lib/ISOLINUX/mboot.c32',
+                'root_dir/image/loader/'
             )
         ]
         assert mock_command.call_args_list == [
             call(
                 command=[
                     'bash', '-c',
-                    'cp root_dir/boot/memtest* ' +
+                    'cp root_dir/boot/memtest* '
                     'root_dir/image/loader//memtest'
                 ], raise_on_error=False
             ),
             call(
                 [
                     'bash', '-c',
-                    'cp root_dir/etc/bootsplash/themes/openSUSE/' +
+                    'cp root_dir/etc/bootsplash/themes/openSUSE/'
                     'cdrom/* root_dir/image/loader/'
                 ]
             ),
@@ -290,7 +329,7 @@ class TestBootLoaderConfigIsoLinux(object):
             call(
                 [
                     'cp',
-                    'root_dir/etc/bootsplash/themes/openSUSE/' +
+                    'root_dir/etc/bootsplash/themes/openSUSE/'
                     'bootloader/message', 'root_dir/image/loader/'
                 ]
             )
@@ -323,12 +362,12 @@ class TestBootLoaderConfigIsoLinux(object):
             'default_boot': 'Bob',
             'title': 'Bob',
             'gfxmode': '800 600',
-            'boot_options': 'splash root=live:CDLABEL=CDROM' +
+            'boot_options': 'splash root=live:CDLABEL=CDROM'
             ' rd.live.image rd.live.overlay.persistent',
             'boot_timeout': 100,
-            'failsafe_boot_options': 'splash ide=nodma apm=off' +
-            ' noresume edd=off nomodeset 3' +
-            ' root=live:CDLABEL=CDROM rd.live.image' +
+            'failsafe_boot_options': 'splash ide=nodma apm=off'
+            ' noresume edd=off nomodeset 3'
+            ' root=live:CDLABEL=CDROM rd.live.image'
             ' rd.live.overlay.persistent',
             'kernel_file': 'linux'
         }

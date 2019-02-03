@@ -795,6 +795,28 @@ class TestSystemSetup(object):
             'target_dir/some-image.x86_64-1.2.3.packages', 'w'
         )
 
+    @patch_open
+    def test_setup_machine_id(self, mock_open):
+        self.setup.setup_machine_id()
+        mock_open.assert_called_once_with(
+            'root_dir/etc/machine-id', 'w'
+        )
+
+    @patch('kiwi.system.setup.Command.run')
+    @patch('kiwi.system.setup.Path.which')
+    @patch('kiwi.logger.log.warning')
+    def test_setup_permissions(
+        self, mock_log_warn, mock_path_which, mock_command
+    ):
+        mock_path_which.return_value = 'chkstat'
+        self.setup.setup_permissions()
+        mock_command.assert_called_once_with(
+            ['chroot', 'root_dir', 'chkstat', '--system', '--set']
+        )
+        mock_path_which.return_value = None
+        self.setup.setup_permissions()
+        mock_log_warn.assert_called_once()
+
     @patch('kiwi.system.setup.Command.run')
     @patch_open
     def test_export_package_list_rpm_no_dbpath(

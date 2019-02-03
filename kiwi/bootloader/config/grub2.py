@@ -37,7 +37,6 @@ from kiwi.exceptions import (
     KiwiBootLoaderGrubModulesError,
     KiwiBootLoaderGrubSecureBootError,
     KiwiBootLoaderGrubFontError,
-    KiwiBootLoaderGrubDataError
 )
 
 
@@ -86,6 +85,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         self.bootpath = self.get_boot_path()
         self.theme = self.get_boot_theme()
         self.timeout = self.get_boot_timeout_seconds()
+        self.continue_on_timeout = self.get_continue_on_timeout()
         self.failsafe_boot = self.failsafe_boot_entry_requested()
         self.mediacheck_boot = self.xml_state.build_type.get_mediacheck()
         self.xen_guest = self.xml_state.is_xen_guest()
@@ -313,13 +313,15 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
             log.info('--> Using multiboot install template')
             parameters['hypervisor'] = hypervisor
             template = self.grub2.get_multiboot_install_template(
-                self.failsafe_boot, self.terminal
+                self.failsafe_boot, self.terminal,
+                self.continue_on_timeout
             )
         else:
             log.info('--> Using standard boot install template')
             hybrid_boot = True
             template = self.grub2.get_install_template(
-                self.failsafe_boot, hybrid_boot, self.terminal
+                self.failsafe_boot, hybrid_boot, self.terminal,
+                self.continue_on_timeout
             )
         try:
             self.config = template.substitute(parameters)
@@ -701,12 +703,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
     def _get_module_path(self, format_name, lookup_path=None):
         if not lookup_path:
             lookup_path = self.root_dir
-        return ''.join(
-            [
-                self._find_grub_data(lookup_path + '/usr/lib'),
-                '/', format_name
-            ]
-        )
+        return Defaults.get_grub_path(lookup_path, format_name)
 
     def _find_theme_background_file(self, lookup_path):
         background_pattern = os.sep.join(
@@ -721,17 +718,22 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
     def _copy_theme_data_to_boot_directory(self, lookup_path):
         if not lookup_path:
             lookup_path = self.root_dir
-        boot_unicode_font = self.root_dir + '/boot/unicode.pf2'
+        boot_fonts_dir = os.sep.join(
+            [self.root_dir, 'boot', self.boot_directory_name, 'fonts']
+        )
+        Path.create(boot_fonts_dir)
+        boot_unicode_font = boot_fonts_dir + '/unicode.pf2'
         if not os.path.exists(boot_unicode_font):
-            unicode_font = self._find_grub_data(lookup_path + '/usr/share') + \
-                '/unicode.pf2'
             try:
+                unicode_font = Defaults.get_grub_path(
+                    lookup_path, 'unicode.pf2'
+                )
                 Command.run(
                     ['cp', unicode_font, boot_unicode_font]
                 )
-            except Exception:
+            except Exception as issue:
                 raise KiwiBootLoaderGrubFontError(
-                    'Unicode font %s not found' % unicode_font
+                    'Setting up unicode font failed with {0}'.format(issue)
                 )
 
         boot_theme_dir = os.sep.join(
@@ -740,12 +742,13 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         Path.create(boot_theme_dir)
 
         if self.theme:
-            theme_dir = self._find_grub_data(lookup_path + '/usr/share') + \
-                '/themes/' + self.theme
+            theme_dir = Defaults.get_grub_path(
+                lookup_path, 'themes/' + self.theme, raise_on_error=False
+            )
             boot_theme_background_file = self._find_theme_background_file(
                 lookup_path
             )
-            if os.path.exists(theme_dir):
+            if theme_dir and os.path.exists(theme_dir):
                 if boot_theme_background_file:
                     # A background file was found. Preserve a copy of the
                     # file which was created at install time of the theme
@@ -840,15 +843,6 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
             raise KiwiBootLoaderGrubModulesError(
                 'Module synchronisation failed with: %s' % format(e)
             )
-
-    def _find_grub_data(self, lookup_path):
-        grub_path = Defaults.get_grub_path(lookup_path)
-        if grub_path:
-            return grub_path
-
-        raise KiwiBootLoaderGrubDataError(
-            'No grub2 installation found in %s' % lookup_path
-        )
 
     def _get_shim_install(self):
         chroot_env = {

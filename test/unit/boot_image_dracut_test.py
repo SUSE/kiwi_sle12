@@ -45,13 +45,24 @@ class TestBootImageKiwi(object):
         mock_setup.return_value = setup
         self.boot_image.prepare()
         setup.import_shell_environment.assert_called_once_with(profile)
+        setup.setup_machine_id.assert_called_once_with()
         assert self.boot_image.dracut_options == [
             '--install', '/.profile'
         ]
 
     def test_include_file(self):
         self.boot_image.include_file('foo')
-        assert self.boot_image.dracut_options == [
+        assert self.boot_image.included_files == [
+            '--install', 'foo'
+        ]
+        assert self.boot_image.included_files_install == []
+
+    def test_include_file_install(self):
+        self.boot_image.include_file('foo', install_media=True)
+        assert self.boot_image.included_files == [
+            '--install', 'foo'
+        ]
+        assert self.boot_image.included_files_install == [
             '--install', 'foo'
         ]
 
@@ -67,7 +78,9 @@ class TestBootImageKiwi(object):
         kernel.get_kernel = mock.Mock(return_value=kernel_details)
         mock_kernel.return_value = kernel
         self.boot_image.include_file('system-directory/etc/foo')
-        self.boot_image.include_file('/system-directory/var/lib/bar')
+        self.boot_image.include_file(
+            '/system-directory/var/lib/bar', install_media=True
+        )
         self.boot_image.create_initrd()
         assert mock_command.call_args_list == [
             call([
@@ -85,13 +98,12 @@ class TestBootImageKiwi(object):
             ])
         ]
         mock_command.reset_mock()
-        self.boot_image.create_initrd(basename='foo')
+        self.boot_image.create_initrd(basename='foo', install_initrd=True)
         assert mock_command.call_args_list == [
             call([
                 'chroot', 'system-directory',
                 'dracut', '--force', '--no-hostonly',
                 '--no-hostonly-cmdline', '--xz',
-                '--install', 'system-directory/etc/foo',
                 '--install', '/system-directory/var/lib/bar',
                 'foo.xz', '1.2.3'
             ]),

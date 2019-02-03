@@ -34,6 +34,7 @@ partition-size-type = xsd:token {pattern = "\d+|\d+M|\d+G"}
 vhd-tag-type = xsd:token {pattern = "[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}"}
 groups-list = xsd:token {pattern = "[a-zA-Z0-9_\-\.]+(,[a-zA-Z0-9_\-\.]+)*"}
 arch-name = xsd:token {pattern = "(x86_64|i586|i686|ix86|aarch64|arm64|armv5el|armv5tel|armv6hl|armv6l|armv7hl|armv7l|ppc|ppc64|ppc64le|s390|s390x)(,(x86_64|i586|i686|ix86|aarch64|arm64|armv5el|armv5tel|armv6hl|armv6l|armv7hl|armv7l|ppc|ppc64|ppc64le|s390|s390x))*"}
+portnum-type = xsd:token {pattern = "(\d+|\d+/(udp|tcp))"}
 
 #==========================================
 # start with image description
@@ -1345,9 +1346,8 @@ div {
         ]
     k.type.boottimeout.attribute =
         ## Specifies the boot timeout in seconds prior to launching
-        ## the default boot option. the unit for the timeout value
-        ## is seconds if GRUB is used as the boot loader and 1/10
-        ## seconds if syslinux is used
+        ## the default boot option. By default the timeout is set
+        ## to 10sec
         attribute boottimeout { xsd:nonNegativeInteger }
         >> sch:pattern [ id = "boottimeout" is-a = "image_type"
             sch:param [ name = "attr" value = "boottimeout" ]
@@ -1545,9 +1545,9 @@ div {
             "vmx" | "xfs" | "oci"
         }
     k.type.installboot.attribute =
-        ## Specifies the bootloader default boot entry for the"
-        ## initial boot of a kiwi install image. This value is"
-        ## only evaluated for grub and ext|syslinux"
+        ## Specifies the bootloader default boot entry for the
+        ## initial boot of a kiwi install image. This value is
+        ## only evaluated for grub and ext|syslinux
         attribute installboot {
             "failsafe-install" | "harddisk" | "install"
         }
@@ -1555,9 +1555,19 @@ div {
             sch:param [ name = "attr" value = "installboot" ]
             sch:param [ name = "types" value = "oem" ]
         ]
+    k.type.install_continue_on_timeout.attribute =
+        ## Specifies the boot timeout handling for the KIWI
+        ## install image. If set to "true" the configured boottimeout
+        ## or its default value applies. If set to "false" no
+        ## timeout applies in the boot menu of the install image.
+        attribute install_continue_on_timeout { xsd:boolean }
+        >> sch:pattern [ id = "install_continue_on_timeout" is-a = "image_type"
+            sch:param [ name = "attr" value = "install_continue_on_timeout" ]
+            sch:param [ name = "types" value = "oem" ]
+        ]
     k.type.installprovidefailsafe.attribute =
-        ## Specifies if the bootloader menu should provide an"
-        ## failsafe entry with special kernel parameters or not"
+        ## Specifies if the bootloader menu should provide an
+        ## failsafe entry with special kernel parameters or not
         attribute installprovidefailsafe { xsd:boolean }
         >> sch:pattern [ id = "installprovidefailsafe" is-a = "image_type"
             sch:param [ name = "attr" value = "installprovidefailsafe" ]
@@ -1586,9 +1596,9 @@ div {
             sch:param [ name = "types" value = "oem" ]
         ]
     k.type.mediacheck.attribute =
-        ## Specifies if the bootloader menu should provide an"
+        ## Specifies if the bootloader menu should provide an
         ## mediacheck entry to verify ISO integrity or not.
-        ## Disabled by default and only available for x86 arch family."
+        ## Disabled by default and only available for x86 arch family.
         attribute mediacheck { xsd:boolean }
         >> sch:pattern [ id = "mediacheck" is-a = "image_type"
             sch:param [ name = "attr" value = "mediacheck" ]
@@ -1753,6 +1763,7 @@ div {
         k.type.initrd_system.attribute? &
         k.type.image.attribute &
         k.type.installboot.attribute? &
+        k.type.install_continue_on_timeout.attribute? &
         k.type.installprovidefailsafe.attribute? &
         k.type.installiso.attribute? &
         k.type.installstick.attribute? &
@@ -2207,7 +2218,8 @@ div {
             k.expose? &
             k.volumes? &
             k.environment? &
-            k.labels?
+            k.labels? &
+            k.history?
         }
 }
 
@@ -2296,8 +2308,9 @@ div {
 #
 div {
     k.port.number.attribute =
-        ## Specifies the port number to expose
-        attribute number { xsd:nonNegativeInteger }
+        ## Specifies the port number and transport protocol to expose.
+        ## If no protocol is defined OCI defaults are applied.
+        attribute number { portnum-type }
 
     k.port.attlist =
         k.port.number.attribute
@@ -2397,6 +2410,32 @@ div {
         element label {
             k.label.attlist &
             empty
+        }
+}
+
+#==========================================
+# main block: <history>
+#
+div {
+    k.history.created_by.attribute =
+        ## Specifies the 'created by' history record. By default set to 'KIWI'
+        attribute created_by { text }
+
+	k.history.author.attribute =
+        ## Specifies the 'author' history record.
+        attribute author { text }
+
+    k.history.attlist =
+        k.history.created_by.attribute? &
+		k.history.author.attribute?
+
+    k.history =
+        ## Provides details about the container history. Includes the
+        ## 'created by', 'author' as attributes and its content represents
+        ## the 'comment' entry.
+        element history {
+            k.history.attlist,
+            text
         }
 }
 

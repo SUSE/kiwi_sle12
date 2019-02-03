@@ -604,23 +604,23 @@ class TestXMLState(object):
         state.add_container_config_label('somelabel', 'overwrittenvalue')
         state.add_container_config_label('new_label', 'new value')
         config = state.get_container_config()
-        assert config['labels'] == [
-            '--config.label=somelabel=overwrittenvalue',
-            '--config.label=someotherlabel=anotherlabelvalue',
-            '--config.label=new_label=new value'
-        ]
+        assert config['labels'] == {
+            'somelabel': 'overwrittenvalue',
+            'someotherlabel': 'anotherlabelvalue',
+            'new_label': 'new value'
+        }
 
     def test_add_container_label_without_contianerconfig(self):
         xml_data = self.description.load()
         state = XMLState(xml_data, ['xenFlavour'], 'docker')
         state.add_container_config_label('somelabel', 'newlabelvalue')
         config = state.get_container_config()
-        assert config['labels'] == [
-            '--config.label=somelabel=newlabelvalue'
-        ]
+        assert config['labels'] == {
+            'somelabel': 'newlabelvalue'
+        }
 
     @patch('kiwi.logger.log.warning')
-    def test_add_container_label_no_contianer_image_type(self, mock_log_warn):
+    def test_add_container_label_no_container_image_type(self, mock_log_warn):
         xml_data = self.description.load()
         state = XMLState(xml_data, ['vmxFlavour'], 'vmx')
         state.add_container_config_label('somelabel', 'newlabelvalue')
@@ -635,36 +635,29 @@ class TestXMLState(object):
 
     def test_get_container_config(self):
         expected_config = {
-            'labels': [
-                '--config.label=somelabel=labelvalue',
-                '--config.label=someotherlabel=anotherlabelvalue'
-            ],
-            'maintainer': ['--author=tux'],
-            'entry_subcommand': [
-                '--config.cmd=ls',
-                '--config.cmd=-l'
-            ],
+            'labels': {
+                'somelabel': 'labelvalue',
+                'someotherlabel': 'anotherlabelvalue'
+            },
+            'maintainer': 'tux',
+            'entry_subcommand': ['ls', '-l'],
             'container_name': 'container_name',
             'container_tag': 'container_tag',
             'additional_tags': ['current', 'foobar'],
-            'workingdir': ['--config.workingdir=/root'],
-            'environment': [
-                '--config.env=PATH=/bin:/usr/bin:/home/user/bin',
-                '--config.env=SOMEVAR=somevalue'
-            ],
-            'user': ['--config.user=root'],
-            'volumes': [
-                '--config.volume=/tmp',
-                '--config.volume=/var/log'
-            ],
-            'entry_command': [
-                '--config.entrypoint=/bin/bash',
-                '--config.entrypoint=-x'
-            ],
-            'expose_ports': [
-                '--config.exposedports=80',
-                '--config.exposedports=8080'
-            ]
+            'workingdir': '/root',
+            'environment': {
+                'PATH': '/bin:/usr/bin:/home/user/bin',
+                'SOMEVAR': 'somevalue'
+            },
+            'user': 'root',
+            'volumes': ['/tmp', '/var/log'],
+            'entry_command': ['/bin/bash', '-x'],
+            'expose_ports': ['80', '8080'],
+            'history': {
+                'author': 'history author',
+                'comment': 'This is a comment',
+                'created_by': 'created by text'
+            }
         }
         xml_data = self.description.load()
         state = XMLState(xml_data, ['vmxFlavour'], 'docker')
@@ -672,17 +665,13 @@ class TestXMLState(object):
 
     def test_get_container_config_clear_commands(self):
         expected_config = {
-            'maintainer': ['--author=tux'],
-            'entry_subcommand': [
-                '--clear=config.cmd'
-            ],
+            'maintainer': 'tux',
+            'entry_subcommand': [],
             'container_name': 'container_name',
             'container_tag': 'container_tag',
-            'workingdir': ['--config.workingdir=/root'],
-            'user': ['--config.user=root'],
-            'entry_command': [
-                '--clear=config.entrypoint',
-            ]
+            'workingdir': '/root',
+            'user': 'root',
+            'entry_command': [],
         }
         xml_data = self.description.load()
         state = XMLState(xml_data, ['derivedContainer'], 'docker')
@@ -720,10 +709,22 @@ class TestXMLState(object):
     def test_is_xen_guest_by_machine_setup(self):
         assert self.state.is_xen_guest() is True
 
-    def test_is_xen_guest_by_firmware_setup(self):
+    def test_is_xen_guest_no_xen_guest_setup(self):
+        assert self.boot_state.is_xen_guest() is False
+
+    @patch('platform.machine')
+    def test_is_xen_guest_by_firmware_setup(self, mock_platform_machine):
+        mock_platform_machine.return_value = 'x86_64'
         xml_data = self.description.load()
         state = XMLState(xml_data, ['ec2Flavour'], 'vmx')
         assert state.is_xen_guest() is True
+
+    @patch('platform.machine')
+    def test_is_xen_guest_by_architecture(self, mock_platform_machine):
+        mock_platform_machine.return_value = 'unsupported'
+        xml_data = self.description.load()
+        state = XMLState(xml_data, ['ec2Flavour'], 'vmx')
+        assert state.is_xen_guest() is False
 
     def test_get_initrd_system(self):
         xml_data = self.description.load()

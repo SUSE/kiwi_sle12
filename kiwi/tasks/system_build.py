@@ -134,6 +134,7 @@ class SystemBuildTask(CliTask):
         self.load_xml_description(
             self.command_args['--description']
         )
+        self.runtime_checker.check_minimal_required_preferences()
         self.runtime_checker.check_efi_mode_for_disk_overlay_correctly_setup()
         self.runtime_checker.check_boot_description_exists()
         self.runtime_checker.check_consistent_kernel_in_boot_and_system_image()
@@ -232,6 +233,7 @@ class SystemBuildTask(CliTask):
         setup.setup_locale()
         setup.setup_plymouth_splash()
         setup.setup_timezone()
+        setup.setup_permissions()
 
         # make sure manager instance is cleaned up now
         del manager

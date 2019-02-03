@@ -38,6 +38,14 @@ class TestRuntimeConfig(object):
     def test_is_obs_public(self):
         assert self.runtime_config.is_obs_public() is True
 
+    def test_is_bundle_compression_requested(self):
+        assert self.runtime_config.is_bundle_compression_requested() is True
+
+    def test_is_bundle_compression_requested_default(self):
+        with patch.dict('os.environ', {'HOME': './'}):
+            runtime_config = RuntimeConfig()
+            assert runtime_config.is_bundle_compression_requested() is True
+
     def test_is_obs_public_default(self):
         with patch.dict('os.environ', {'HOME': './'}):
             runtime_config = RuntimeConfig()
@@ -95,3 +103,11 @@ class TestRuntimeConfig(object):
         mock_warning.assert_called_once_with(
             'Skipping invalid iso tool category: foo'
         )
+
+    def test_get_oci_archive_tool(self):
+        assert self.runtime_config.get_oci_archive_tool() == 'umoci'
+
+    def test_get_oci_archive_tool_default(self):
+        with patch.dict('os.environ', {'HOME': './'}):
+            runtime_config = RuntimeConfig()
+            assert runtime_config.get_oci_archive_tool() == 'umoci'

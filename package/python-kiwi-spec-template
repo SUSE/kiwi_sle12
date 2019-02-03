@@ -20,10 +20,15 @@
 # If they aren't provided by a system installed macro, define them
 %{!?_defaultdocdir: %global _defaultdocdir %{_datadir}/doc}
 %{!?__python2: %global __python2 /usr/bin/python2}
+%{!?__python3: %global __python3 /usr/bin/python3}
 
 # Expanded form required for debbuild's simpler engine
 %if %{undefined python2_sitelib}
 %global python2_sitelib %(%{__python2} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")
+%endif
+
+%if %{undefined python3_sitelib}
+%global python3_sitelib %(%{__python3} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")
 %endif
 
 %if 0%{?debian} || 0%{?ubuntu}
@@ -31,10 +36,12 @@
 %global pygroup python
 %global sysgroup admin
 %global develsuffix dev
+%global update_alternatives %{_bindir}/update-alternatives
 %else
 %global pygroup Development/Languages/Python
 %global sysgroup System/Management
 %global develsuffix devel
+%global update_alternatives %{_sbindir}/update-alternatives
 %endif
 
 Name:           python-kiwi
@@ -54,6 +61,8 @@ Source1:        %{name}-rpmlintrc
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 %if 0%{?fedora} || 0%{?suse_version}
 BuildRequires:  python3-devel
+%endif
+%if 0%{?fedora} || 0%{?suse_version} || 0%{?ubuntu} >= 1804 || 0%{?debian} >= 9
 BuildRequires:  python3-setuptools
 BuildRequires:  fdupes
 %endif
@@ -102,6 +111,9 @@ Requires(post): update-alternatives
 Requires(postun): update-alternatives
 %ifarch x86_64
 Requires:       grub2-x86_64-efi
+%endif
+%ifarch %{ix86} x86_64
+Recommends:     gfxboot
 %endif
 Requires:       qemu-tools
 Requires:       squashfs
@@ -158,13 +170,17 @@ Python 2 library of the KIWI Image System. Provides an operating system
 image builder for Linux supported hardware platforms as well as for
 virtualization and cloud systems like Xen, KVM, VMware, EC2 and more.
 
-%if 0%{?fedora} || 0%{?suse_version}
+%if 0%{?fedora} || 0%{?suse_version} || 0%{?ubuntu} >= 1804 || 0%{?debian} >= 9
 # python3-kiwi
 %package -n python3-kiwi
 Summary:        KIWI - Appliance Builder Next Generation
 Group:          Development/Languages/Python
 Recommends:     jing
+%if 0%{?ubuntu} || 0%{?debian}
+Requires:       python3-yaml
+%else
 Requires:       python3-PyYAML
+%endif
 Requires:       python3-docopt
 Requires:       python3-future
 Requires:       python3-lxml
@@ -179,6 +195,9 @@ Requires(post): update-alternatives
 Requires(postun): update-alternatives
 %ifarch x86_64
 Requires:       grub2-x86_64-efi
+%endif
+%ifarch %{ix86} x86_64
+Recommends:     gfxboot
 %endif
 Requires:       qemu-tools
 Requires:       squashfs
@@ -203,6 +222,12 @@ Provides:       kiwi-packagemanager:dnf
 %if 0%{?fedora} >= 26 || 0%{?suse_version}
 Requires:       zypper
 Provides:       kiwi-packagemanager:zypper
+%endif
+%if 0%{?debian} || 0%{?ubuntu}
+Requires:       debootstrap
+Requires:       qemu-utils
+Requires:       squashfs-tools
+Requires:       gdisk
 %endif
 Requires:       dosfstools
 Requires:       e2fsprogs
@@ -242,7 +267,7 @@ first boot of an appliance. The tools are not meant to be used
 outside of the scope of kiwi appliance building.
 
 %if %{_vendor} != "debbuild"
-%ifarch %ix86 x86_64
+%ifarch %{ix86} x86_64
 %package -n kiwi-pxeboot
 Summary:        KIWI - PXE boot structure
 Requires:       syslinux
@@ -270,12 +295,18 @@ BuildRequires:  dracut
 %endif
 Requires:       bc
 Requires:       cryptsetup
-%if 0%{?fedora} || 0%{?rhel} || 0%{?debian} || 0%{?ubuntu}
+%if 0%{?fedora} || 0%{?rhel} || 0%{?ubuntu} >= 1804 || 0%{?debian} >= 9
 Requires:       btrfs-progs
+Requires:       gdisk
+Requires:       dracut-network
+%else
+%if 0%{?debian} || 0%{?ubuntu}
+Requires:       btrfs-tools
 Requires:       gdisk
 %else
 Requires:       btrfsprogs
 Requires:       gptfdisk
+%endif
 %endif
 Requires:       coreutils
 Requires:       e2fsprogs
@@ -364,11 +395,18 @@ Requires:       e2fsprogs
 Requires:       util-linux
 %if 0%{?debian} || 0%{?ubuntu}
 Requires:       dmsetup
-%else
+Requires:       dracut-network
+%endif
+%if 0%{?fedora} || 0%{?rhel}
+Requires:       device-mapper
+Requires:       dracut-network
+%endif
+%if 0%{?suse_version}
 Requires:       device-mapper
 %endif
 Requires:       dracut
 Requires:       genisoimage
+Requires:       parted
 License:        GPL-3.0-or-later
 Group:          %{sysgroup}
 
@@ -413,7 +451,7 @@ sed -e "s|#!/usr/bin/env python||" -i kiwi/xml_parse.py
 # Build Python 2 version
 python2 setup.py build --cflags="${RPM_OPT_FLAGS}"
 
-%if 0%{?fedora} || 0%{?suse_version}
+%if 0%{?fedora} || 0%{?suse_version} || 0%{?ubuntu} >= 1804 || 0%{?debian} >= 9
 # Build Python 3 version
 python3 setup.py build --cflags="${RPM_OPT_FLAGS}"
 %endif
@@ -422,7 +460,7 @@ python3 setup.py build --cflags="${RPM_OPT_FLAGS}"
 # Install Python 2 version
 python2 setup.py install --prefix=%{_prefix} --root=%{buildroot} %{?is_deb:--install-layout=deb}
 
-%if 0%{?fedora} || 0%{?suse_version}
+%if 0%{?fedora} || 0%{?suse_version} || 0%{?ubuntu} >= 1804 || 0%{?debian} >= 9
 # Install Python 3 version
 python3 setup.py install --prefix=%{_prefix} --root=%{buildroot} %{?is_deb:--install-layout=deb}
 %endif
@@ -431,7 +469,7 @@ python3 setup.py install --prefix=%{_prefix} --root=%{buildroot} %{?is_deb:--ins
 make buildroot=%{buildroot}/ install_dracut
 
 # Install documentation in PDF format
-make buildroot=%{buildroot}/ install_pdf_docs
+make buildroot=%{buildroot}/ docdir=%{_defaultdocdir}/ install_package_docs
 
 %if %{_vendor} != "debbuild"
 # init alternatives setup
@@ -453,17 +491,11 @@ ln -s %{_sysconfdir}/alternatives/kiwicompat \
     %{buildroot}%_bindir/kiwicompat
 
 # kiwi pxeboot directory structure to be packed in kiwi-pxeboot
-%ifarch %ix86 x86_64
+%ifarch %{ix86} x86_64
 for i in KIWI pxelinux.cfg image upload boot; do \
     mkdir -p %{buildroot}/srv/tftpboot/$i ;\
 done
 %endif
-%endif
-
-%if  0%{?fedora} || 0%{?rhel}
-install -m 755 -d %{buildroot}/%{_defaultdocdir}/python-kiwi
-mv %{buildroot}/%{_defaultdocdir}/packages/python-kiwi/* %{buildroot}/%{_defaultdocdir}/python-kiwi
-rm -rf %{buildroot}/%{_defaultdocdir}/packages
 %endif
 
 %if 0%{?fedora} || 0%{?suse_version}
@@ -471,43 +503,43 @@ rm -rf %{buildroot}/%{_defaultdocdir}/packages
 %endif
 
 %post -n python2-kiwi
-%{_sbindir}/update-alternatives \
+%{update_alternatives} \
     --install %_bindir/kiwi kiwi %_bindir/kiwi-ng-2 10
-%{_sbindir}/update-alternatives \
+%{update_alternatives} \
     --install %_bindir/kiwi-ng kiwi-ng %_bindir/kiwi-ng-2 10
-%{_sbindir}/update-alternatives \
+%{update_alternatives} \
     --install %_bindir/kiwicompat kiwicompat %_bindir/kiwicompat-2 10
 
-%if 0%{?fedora} || 0%{?suse_version}
+%if 0%{?fedora} || 0%{?suse_version} || 0%{?ubuntu} >= 1804 || 0%{?debian} >= 9
 %post -n python3-kiwi
-%{_sbindir}/update-alternatives \
+%{update_alternatives} \
     --install %_bindir/kiwi kiwi %_bindir/kiwi-ng-3 10
-%{_sbindir}/update-alternatives \
+%{update_alternatives} \
     --install %_bindir/kiwi-ng kiwi-ng %_bindir/kiwi-ng-3 10
-%{_sbindir}/update-alternatives \
+%{update_alternatives} \
     --install %_bindir/kiwicompat kiwicompat %_bindir/kiwicompat-3 10
 %endif
 
 %preun -n python2-kiwi
-%{_sbindir}/update-alternatives \
+%{update_alternatives} \
     --remove kiwi %_bindir/kiwi
-%{_sbindir}/update-alternatives \
+%{update_alternatives} \
     --remove kiwi %_bindir/kiwi-ng
-%{_sbindir}/update-alternatives \
+%{update_alternatives} \
     --remove kiwicompat %_bindir/kiwicompat
 
-%if 0%{?fedora} || 0%{?suse_version}
+%if 0%{?fedora} || 0%{?suse_version} || 0%{?ubuntu} >= 1804 || 0%{?debian} >= 9
 %preun -n python3-kiwi
-%{_sbindir}/update-alternatives \
+%{update_alternatives} \
     --remove kiwi %_bindir/kiwi
-%{_sbindir}/update-alternatives \
+%{update_alternatives} \
     --remove kiwi %_bindir/kiwi-ng
-%{_sbindir}/update-alternatives \
+%{update_alternatives} \
     --remove kiwicompat %_bindir/kiwicompat
 %endif
 
 %if %{_vendor} != "debbuild"
-%ifarch %ix86 x86_64
+%ifarch %{ix86} x86_64
 %pre -n kiwi-pxeboot
 #============================================================
 # create user and group tftp if they does not exist
@@ -532,9 +564,8 @@ fi
 %ghost %_sysconfdir/alternatives/kiwi-ng
 %ghost %_sysconfdir/alternatives/kiwicompat
 %{python2_sitelib}/*
-%config %_sysconfdir/bash_completion.d/kiwi-ng-2*.sh
 
-%if 0%{?fedora} || 0%{?suse_version}
+%if 0%{?fedora} || 0%{?suse_version} || 0%{?ubuntu} >= 1804 || 0%{?debian} >= 9
 %files -n python3-kiwi
 %defattr(-,root,root,-)
 %{_bindir}/kiwi-ng-3*
@@ -546,7 +577,6 @@ fi
 %ghost %_sysconfdir/alternatives/kiwi-ng
 %ghost %_sysconfdir/alternatives/kiwicompat
 %{python3_sitelib}/*
-%config %_sysconfdir/bash_completion.d/kiwi-ng-3*.sh
 %endif
 
 %files -n kiwi-man-pages
@@ -555,6 +585,7 @@ fi
 %{_defaultdocdir}/python-kiwi/kiwi.pdf
 %{_defaultdocdir}/python-kiwi/LICENSE
 %{_defaultdocdir}/python-kiwi/README
+%config %_sysconfdir/bash_completion.d/kiwi-ng.sh
 %doc %{_mandir}/man8/*
 
 %files -n kiwi-tools
@@ -585,7 +616,7 @@ fi
 %{_usr}/lib/dracut/modules.d/90kiwi-overlay
 
 %if %{_vendor} != "debbuild"
-%ifarch %ix86 x86_64
+%ifarch %{ix86} x86_64
 %files -n kiwi-pxeboot
 %defattr(-, root, root)
 %dir %attr(0755,tftp,tftp) /srv/tftpboot

@@ -86,6 +86,7 @@ class BootLoaderConfigIsoLinux(BootLoaderConfigBase):
         self.gfxmode = self.get_gfxmode('isolinux')
         # isolinux counts the timeout in units of 1/10 sec
         self.timeout = self.get_boot_timeout_seconds() * 10
+        self.continue_on_timeout = self.get_continue_on_timeout()
         self.cmdline = self.get_boot_cmdline()
         self.cmdline_failsafe = ' '.join(
             [self.cmdline, Defaults.get_failsafe_kernel_options()]
@@ -152,12 +153,14 @@ class BootLoaderConfigIsoLinux(BootLoaderConfigBase):
             log.info('--> Using multiboot install template')
             parameters['hypervisor'] = hypervisor
             template = self.isolinux.get_multiboot_install_template(
-                self.failsafe_boot, self._have_theme(), self.terminal
+                self.failsafe_boot, self._have_theme(), self.terminal,
+                self.continue_on_timeout
             )
         else:
             log.info('--> Using install template')
             template = self.isolinux.get_install_template(
-                self.failsafe_boot, self._have_theme(), self.terminal
+                self.failsafe_boot, self._have_theme(), self.terminal,
+                self.continue_on_timeout
             )
         try:
             self.config = template.substitute(parameters)
@@ -260,7 +263,8 @@ class BootLoaderConfigIsoLinux(BootLoaderConfigBase):
         ]
         syslinux_dirs = [
             '/usr/share/syslinux/',
-            '/usr/lib/syslinux/modules/bios/'
+            '/usr/lib/syslinux/modules/bios/',
+            '/usr/lib/ISOLINUX/'
         ]
         for syslinux_file_name in syslinux_file_names:
             for syslinux_dir in syslinux_dirs:

@@ -128,7 +128,9 @@ The prepare step consists of the following substeps:
 
    .. code-block:: xml
 
-      <package type="delete">package_to_be_deleted</package>
+      <packages type="delete">
+          <package name="package_to_be_deleted"/>
+      </packages>
 
 #. **Apply the Overlay Tree.**
 
@@ -383,10 +385,11 @@ The following list describes the functions available inside the
      baseStripMans more less
 
 ``baseStripRPM``
-  Remove rpms defined in :file:`config.xml` in the image type=delete section.
+  Remove rpms defined in :file:`config.xml` in the packages `type=delete`
+  section.
 
 ``suseRemovePackagesMarkedForDeletion``
-  Remove rpms defined in :file:`config.xml` in the image `type=delete`
+  Remove rpms defined in :file:`config.xml` in the packages `type=delete`
   section. The difference compared to `baseStripRPM` is that the suse
   variant checks if the package is really installed prior to passing it
   to rpm to uninstall it. The suse rpm exits with an error exit code
@@ -518,27 +521,19 @@ fine tune the resulting unpacked image are quickly described:
 
 #. **Stateless systemd UUIDs:**
 
-  Usually during the image packages installation when *dbus* and/or
-  *systemd* are installed machine ID files are created and set
+  During the image packages installation when *systemd* and/or
+  *dbus* are installed machine ID files are created and set
   (:file:`/etc/machine-id`, :file:`/var/lib/dbus/machine-id`). Those
-  UUIDs are meant to be unique and set only once in each deployment. In
-  order to ensure that every single box running out from the same image
-  has its own specific systemd UUID, the original image must not include
-  any systemd or dbus ID, this way it is assigned during the first boot.
-  The following bash snippet allows this behavior in :file:`config.sh`:
-
-  .. code:: bash
-
-     #======================================
-     # Make machine-id stateless
-     #--------------------------------------
-     if [ -e /etc/machine-id ]; then
-         > /etc/machine-id
-         if [ -e /var/lib/dbus/machine-id ]; then
-             rm /var/lib/dbus/machine-id
-         fi
-         ln -s /etc/machine-id /var/lib/dbus/machine-id
-     fi
+  UUIDs are meant to be unique and set only once in each deployment.
+  KIWI follows the `systemd recommandations
+  <https://www.freedesktop.org/software/systemd/man/machine-id.html>`_ and
+  whipes any :file:`/etc/machine-id` content, leaving it as an empty file.
+  Note this is only applied for images based on dracut initrd, on container
+  images, for instance, this setting is not applied.
+  
+  In case this setting is required also for a non dracut based image
+  this could be also achieved by clearing :file:`/etc/machine-id`
+  in :file:`config.sh`.
 
   .. note:: Avoid interactive boot
 
@@ -547,6 +542,26 @@ fine tune the resulting unpacked image are quickly described:
      :command:`systemd-firstboot` service if this file is not present,
      which leads to an interactive firstboot where the user is
      asked to provide some data.
+
+  .. note:: Avoid inconsistent :file:`var/lib/dbus/machine-id`
+
+     It is important to remark that :file:`/etc/machine-id` and
+     :file:`/var/lib/dbus/machine-id` should contain the same unique ID. In
+     modern systems :file:`/var/lib/dbus/machine-id` is already a symlink
+     to :file:`/etc/machine-id`. However in older systems those might be two
+     different files. This is the case for SLE-12 based images, so
+     in those cases it is recommended to add into the :file:`config.sh`
+     the symlink creation:
+  
+     .. code:: bash
+
+        #======================================
+        # Make machine-id consistent with dbus
+        #--------------------------------------
+        if [ -e /var/lib/dbus/machine-id ]; then
+            rm /var/lib/dbus/machine-id
+        fi
+        ln -s /etc/machine-id /var/lib/dbus/machine-id
 
 Image Customization with ``images.sh`` Shell Script
 ...................................................
@@ -860,6 +875,19 @@ the available kernel boot parameters for this modules:
 ``rd.live.overlay.cowfs``
   This variable tells a live iso image which filesystem should be
   used to store data on the persistent write partition.
+
+``rd.live.cowfile.mbsize``
+  This variable tells a live iso image the size of the cowfile in MB.
+  When using tools like `live-grub-stick` the live iso will be copied
+  as a file on the target device and a grub loopback setup is created
+  there to boot the live system from file. In such a case the
+  persistent write setup, which usually creates an extra write
+  partition on the target, will fail in almost all cases because
+  the target has no free and unpartitioned space available.
+  Because of that a cow file(live_system.cow) instead of a partition
+  is created. The cow file will be created in the same directory
+  the live iso image file was read from by grub and takes the
+  configured size or the default size of 500MB.
 
 ``rd.live.dir``
   This variable tells a live iso image the directory which contains

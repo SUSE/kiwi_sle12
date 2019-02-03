@@ -216,6 +216,61 @@ class SystemSetup(object):
             archive = ArchiveTar(overlay_archive)
             archive.extract(self.root_dir)
 
+    def setup_machine_id(self):
+        """
+        Setup systemd machine id
+
+        Empty out the machine id which was provided by the package
+        installation process. This will instruct the dracut initrd
+        code to create a new machine id. This way a golden image
+        produces unique machine id's on first deployment and boot
+        of the image.
+
+        Note: Requires dracut connected image type
+
+        This method must only be called if the image is of
+        a type which gets booted via a dracut created initrd.
+        Deleting the machine-id without the dracut initrd
+        creating a new one produces an inconsistent system
+        """
+        machine_id = os.sep.join(
+            [self.root_dir, 'etc', 'machine-id']
+        )
+        with open(machine_id, 'w'):
+            pass
+
+    def setup_permissions(self):
+        """
+        Check and Fix permissions using chkstat
+
+        Call chkstat in system mode which reads /etc/sysconfig/security
+        to determine the configured security level and applies the
+        appropriate permission definitions from the /etc/permissions*
+        files. It's possible to provide those files as overlay files
+        in the image description to apply a certain permission setup
+        when needed. Otherwise the default setup as provided on the
+        package level applies.
+
+        It's required that the image root system has chkstat installed.
+        If not present KIWI skips this step and continuous with a
+        warning.
+        """
+        chkstat_search_env = {
+            'PATH': os.sep.join([self.root_dir, 'usr', 'bin'])
+        }
+        chkstat = Path.which(
+            'chkstat', custom_env=chkstat_search_env, access_mode=os.X_OK
+        )
+        if chkstat:
+            log.info('Check/Fix File Permissions')
+            Command.run(
+                ['chroot', self.root_dir, 'chkstat', '--system', '--set']
+            )
+        else:
+            log.warning(
+                'chkstat not found in image. File Permissions Check skipped'
+            )
+
     def setup_keyboard_map(self):
         """
         Setup console keyboard
@@ -906,7 +961,8 @@ class SystemSetup(object):
             ] + dbpath_option
         )
         with open(filename, 'w') as packages:
-            packages.write(query_call.output)
+            packages.write(os.linesep.join(sorted(query_call.output.splitlines())))
+            packages.write(os.linesep)
 
     def _export_deb_package_list(self, filename):
         log.info('Export deb packages metadata')
@@ -923,7 +979,8 @@ class SystemSetup(object):
             ]
         )
         with open(filename, 'w') as packages:
-            packages.write(query_call.output)
+            packages.write(os.linesep.join(sorted(query_call.output.splitlines())))
+            packages.write(os.linesep)
 
     def _export_rpm_package_verification(self, filename):
         log.info('Export rpm verification metadata')

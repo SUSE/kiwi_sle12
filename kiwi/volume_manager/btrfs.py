@@ -377,14 +377,13 @@ class VolumeManagerBtrfs(VolumeManagerBase):
             ])
 
     @classmethod
-    def _set_snapper_sysconfig_file(self, root_path):
+    def _set_snapper_sysconfig_file(cls, root_path):
         sysconf_file = SysConfig(
             os.sep.join([root_path, 'etc/sysconfig/snapper'])
         )
-        if (
-            'SNAPPER_CONFIGS' not in sysconf_file or
-            len(sysconf_file['SNAPPER_CONFIGS'].strip('\"')) == 0
-        ):
+        if not sysconf_file.get('SNAPPER_CONFIGS') or \
+           len(sysconf_file['SNAPPER_CONFIGS'].strip('\"')) == 0:
+
             sysconf_file['SNAPPER_CONFIGS'] = '"root"'
             sysconf_file.write()
         elif len(sysconf_file['SNAPPER_CONFIGS'].split()) > 1:

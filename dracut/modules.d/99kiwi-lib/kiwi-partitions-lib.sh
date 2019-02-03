@@ -192,6 +192,7 @@ function get_partition_node_name {
     local partid=$2
     local index=1
     local part
+    udev_pending
     for partnode in $(
         lsblk -p -r -o NAME,TYPE "${disk}" | grep part | cut -f1 -d ' '
     );do
@@ -268,6 +269,7 @@ function get_free_disk_bytes {
     local part_bytes=0
     local part_count=0
     local part_uuids
+    udev_pending
     for part in $(
         lsblk -p -r -o NAME,TYPE "${disk}" | grep part | cut -f1 -d ' '
     );do
@@ -281,7 +283,7 @@ function get_free_disk_bytes {
                 break
             fi
         done
-        if [ ! -z "${part}" ]; then
+        if [ -n "${part}" ]; then
             part_bytes=$((part_bytes + $(blockdev --getsize64 "${part}")))
             part_uuids[${part_count}]=${current_part_uuid}
             part_count=$((part_count + 1))
@@ -323,6 +325,7 @@ function activate_boot_partition {
 function create_hybrid_gpt {
     local disk_device=$1
     local partition_count
+    udev_pending
     partition_count=$(lsblk -r -o NAME,TYPE "${disk_device}" | grep -c part)
     if [ "${partition_count}" -gt 3 ]; then
         # The max number of partitions to embed is 3
@@ -342,7 +345,7 @@ function finalize_partition_table {
     declare kiwi_BootPart=${kiwi_BootPart}
     declare kiwi_gpt_hybrid_mbr=${kiwi_gpt_hybrid_mbr}
     local disk_device=$1
-    if [ ! -z "${kiwi_BootPart}" ];then
+    if [ -n "${kiwi_BootPart}" ];then
         activate_boot_partition "${disk_device}" "${kiwi_BootPart}"
     fi
     if [ "${kiwi_gpt_hybrid_mbr}" = "true" ];then
@@ -408,9 +411,9 @@ function _parted_sector_init {
     local sector_size=512
     local sector_start=2048
     local part
-    [ ! -z "${kiwi_align}" ] && align=${kiwi_align}
-    [ ! -z "${kiwi_sectorsize}" ] && sector_size=${kiwi_sectorsize}
-    [ ! -z "${kiwi_startsector}" ] && sector_start=${kiwi_startsector}
+    [ -n "${kiwi_align}" ] && align=${kiwi_align}
+    [ -n "${kiwi_sectorsize}" ] && sector_size=${kiwi_sectorsize}
+    [ -n "${kiwi_startsector}" ] && sector_start=${kiwi_startsector}
     local align=$((align / sector_size))
 
     unset partedStartSectors
