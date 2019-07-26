@@ -3,11 +3,7 @@
 <!-- The line below is required in order to use the multibuild OBS features -->
 <!-- OBS-Profiles: @BUILD_FLAVOR@ -->
 
-<<<<<<< HEAD
-<image schemaversion="6.9" name="LimeJeOS-Ubuntu-18.04">
-=======
 <image schemaversion="7.1" name="LimeJeOS-Ubuntu-18.04">
->>>>>>> cbba32e82e9e51a5ea655ba065334c75b6daf7d2
     <description type="system">
         <author>Marcus Schaefer</author>
         <contact>ms@suse.com</contact>
@@ -52,11 +48,7 @@
     </repository>
     <repository type="apt-deb" alias="Ubuntu-Bionic-Universe" distribution="bionic" components="main multiverse restricted universe" repository_gpgcheck="false">
         <source path="obs://Ubuntu:18.04/universe"/>
-<<<<<<< HEAD
-     </repository>
-=======
     </repository>
->>>>>>> cbba32e82e9e51a5ea655ba065334c75b6daf7d2
     <repository type="apt-deb" alias="Ubuntu-Bionic" distribution="bionic" components="main multiverse restricted universe" repository_gpgcheck="false">
         <source path="obs://Ubuntu:18.04/standard"/>
     </repository>
