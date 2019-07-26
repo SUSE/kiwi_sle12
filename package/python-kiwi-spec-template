@@ -147,7 +147,7 @@ Requires:       gdisk
 %endif
 Requires:       dosfstools
 Requires:       e2fsprogs
-Requires:       xorriso
+Requires:       genisoimage
 Requires:       grub2
 Requires:       kiwi-man-pages
 Requires:       kiwi-tools
@@ -237,7 +237,7 @@ Requires:       gdisk
 %endif
 Requires:       dosfstools
 Requires:       e2fsprogs
-Requires:       xorriso
+Requires:       genisoimage
 Requires:       grub2
 Requires:       kiwi-man-pages
 Requires:       kiwi-tools
@@ -416,7 +416,7 @@ Requires:       dracut-network
 Requires:       device-mapper
 %endif
 Requires:       dracut
-Requires:       xorriso
+Requires:       genisoimage
 Requires:       parted
 License:        GPL-3.0-or-later
 Group:          %{sysgroup}
