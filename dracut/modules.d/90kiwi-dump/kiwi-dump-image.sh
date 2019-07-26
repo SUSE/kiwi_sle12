@@ -45,9 +45,16 @@ function get_disk_list {
     local disk_device_by_id
     local disk_meta
     local list_items
+    local max_disk
+    local kiwi_oem_maxdisk
     local blk_opts="-p -n -r -o NAME,SIZE,TYPE"
     if [ -n "${kiwi_devicepersistency}" ];then
         disk_id=${kiwi_devicepersistency}
+    fi
+    max_disk=0
+    kiwi_oem_maxdisk=$(getarg rd.kiwi.oem.maxdisk=)
+    if [ -n "${kiwi_oem_maxdisk}" ]; then
+        max_disk=$(binsize_to_bytesize "${kiwi_oem_maxdisk}") || max_disk=0
     fi
     if getargbool 0 rd.kiwi.ramdisk; then
         # target should be a ramdisk on request. Thus actively
@@ -77,6 +84,14 @@ function get_disk_list {
             continue
         fi
         disk_size=$(echo "${disk_meta}" | cut -f2 -d:)
+        if [ ${max_disk} -gt 0 ]; then
+            local disk_size_bytes
+            disk_size_bytes=$(binsize_to_bytesize "${disk_size}") || disk_size_bytes=0
+            if [ "${disk_size_bytes}" -gt "${max_disk}" ]; then
+                info "${disk_device} filtered out by rd.kiwi.oem.maxdisk=${kiwi_oem_maxdisk} (is ${disk_size})" >&2
+                continue
+            fi
+        fi
         disk_device_by_id=$(
             get_persistent_device_from_unix_node "${disk_device}" "${disk_id}"
         )
@@ -91,7 +106,8 @@ function get_disk_list {
         # check for custom filter rule
         if [ -n "${kiwi_oemdevicefilter}" ];then
             if [[ ${disk_device} =~ ${kiwi_oemdevicefilter} ]];then
-                info "${disk_device} filtered out by: ${kiwi_oemdevicefilter}"
+                # info is more or less "echo" if debug is on, and it clutters stdout
+                info "${disk_device} filtered out by: ${kiwi_oemdevicefilter}" >&2
                 continue
             fi
         fi
@@ -333,11 +349,13 @@ function get_remote_image_source_files {
         echo "${image_uri}" | awk '{ gsub("\\.xz",".kernel", $1); print $1 }'
     )
 
-    if ! ifup lan0 &>/tmp/net.info;then
-        report_and_quit "Network setup failed, see /tmp/net.info"
-    fi
-
+    # if we can not access image_md5_uri, maybe network setup
+    # by dracut did fail, so collect some additional info
     if ! fetch_file "${image_md5_uri}" > "${image_md5}";then
+        {
+            echo "--- ip a ---"; ip a
+            echo "--- ip r ---"; ip r
+        } >> /tmp/fetch.info 2>&1
         report_and_quit \
             "Failed to fetch ${image_md5_uri}, see /tmp/fetch.info"
     fi
@@ -358,7 +376,20 @@ function get_remote_image_source_files {
 
 function boot_installed_system {
     local boot_options
-    boot_options="$(cat /config.bootoptions)"
+    # if rd.kiwi.install.pass.bootparam is given, pass on most
+    # boot options to the kexec kernel
+    if getargbool 0 rd.kiwi.install.pass.bootparam; then
+        local cmdline
+        local option
+        read -r cmdline < /proc/cmdline
+        for option in ${cmdline}; do
+            case ${option} in
+                rd.kiwi.*) ;; # skip all rd.kiwi options, they might do harm
+                *)  boot_options="${boot_options}${option} ";;
+            esac
+        done
+    fi
+    boot_options="${boot_options}$(cat /config.bootoptions)"
     if getargbool 0 rd.kiwi.debug; then
         boot_options="${boot_options} rd.kiwi.debug"
     fi

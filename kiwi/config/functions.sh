@@ -10,10 +10,21 @@
 #               :
 # DESCRIPTION   : This module contains common used functions
 #               : for the config.sh and image.sh scripts
-#               : 
+#               :
 #               :
 # STATUS        : Development
 #----------------
+
+#======================================
+#             IMPORTANT
+#======================================
+# If you change *anything* in this file
+# PLEASE also adapt the documentation
+# in doc/source/working_with_kiwi/shell_scripts.rst
+#======================================
+#             IMPORTANT
+#======================================
+
 #======================================
 # work in POSIX environment
 #--------------------------------------
@@ -170,13 +181,7 @@ function suseInsertService {
 #--------------------------------------
 function suseService {
     # function kept for compatibility
-    service_name=$1
-    service_state=$2
-    if [ "${service_state}" = off ];then
-        baseRemoveService "${service_name}"
-    else
-        baseInsertService "${service_name}"
-    fi
+    baseService "$@"
 }
 
 #======================================
@@ -315,11 +320,11 @@ function baseMount {
 }
 
 #======================================
-# baseStripMans 
+# baseStripMans
 #--------------------------------------
 function baseStripMans {
     # /..,/
-    # remove all manual pages, except 
+    # remove all manual pages, except
     # one given as parametr
     #
     # params - name of keep man pages
@@ -337,11 +342,11 @@ function baseStripMans {
 }
 
 #======================================
-# baseStripDocs 
+# baseStripDocs
 #--------------------------------------
 function baseStripDocs {
     # /.../
-    # remove all documentation, except 
+    # remove all documentation, except
     # copying license copyright
     # ----
     local docfiles
@@ -379,11 +384,11 @@ function baseStripTranslations {
 }
 
 #======================================
-# baseStripInfos 
+# baseStripInfos
 #--------------------------------------
 function baseStripInfos {
     # /.../
-    # remove all info files, 
+    # remove all info files,
     # except one given as parametr
     #
     # params - name of keep info files
@@ -398,10 +403,9 @@ function baseStripInfos {
 #--------------------------------------
 function baseStripAndKeep {
     # /.../
-    # helper function for strip* functions
-    # read stdin lines of files to check 
-    # for removing
-    # - params - files which should be keep
+    # helper function for the baseStrip* functions
+    # reads the list of files to check from stdin for removing
+    # - params - files which should be kept
     # ----
     local keepFiles="$*"
     local found
@@ -423,7 +427,9 @@ function baseStripAndKeep {
     done
 }
 #======================================
-# baseStripTools
+# baseStripTools {list of toolpath} {list of tools}
+# Helper function for suseStripInitrd
+# function parameters: toolpath, tools.
 #--------------------------------------
 function baseStripTools {
     local tpath=$1
@@ -447,7 +453,7 @@ function baseStripTools {
     done
 }
 #======================================
-# Rm  
+# Rm
 #--------------------------------------
 function Rm {
     # /.../
@@ -458,7 +464,7 @@ function Rm {
 }
 
 #======================================
-# Rpm  
+# Rpm
 #--------------------------------------
 function Rpm {
     # /.../
@@ -602,7 +608,7 @@ function baseStripUnusedLibs {
 #--------------------------------------
 function baseUpdateSysConfig {
     # /.../
-    # Update sysconfig variable contents
+    # Update the contents of a sysconfig variable
     # ----
     local FILE=$1
     local VAR
@@ -743,13 +749,22 @@ function baseStripFirmware {
         for fname in $name ; do
             for match in /lib/firmware/"${fname}" /lib/firmware/*/"${fname}";do
                 if [ -e "${match}" ];then
-                    match=$(echo "${match}" | sed -e 's@\/lib\/firmware\/@@')
+                    match="${match//^\/lib\/firmware\//}"
                     bmdir=$(dirname "${match}")
                     mkdir -p "/lib/firmware-required/${bmdir}"
                     mv "/lib/firmware/${match}" "/lib/firmware-required/${bmdir}"
                 fi
             done
         done
+    done
+    # Preserve licenses and txt files (which are needed for some firmware blobs)
+    find /lib/firmware \( -name 'LICENSE*' -o -name '*txt' \) -print | while read -r match; do
+        if [ -e "${match}" ];then
+            match="${match//\/lib\/firmware\//}"
+            bmdir=$(dirname "${match}")
+            mkdir -p "/lib/firmware-required/${bmdir}"
+            mv "/lib/firmware/${match}" "/lib/firmware-required/${bmdir}"
+        fi
     done
     rm -rf /lib/firmware
     mv /lib/firmware-required /lib/firmware
@@ -760,7 +775,7 @@ function baseStripFirmware {
 #--------------------------------------
 function baseStripModules {
     # /.../
-    # search for update modules and remove the old version
+    # search for updated modules and remove the old version
     # which might be provided by the standard kernel
     # ----
     local kernel=/lib/modules
@@ -817,6 +832,8 @@ function baseStripModules {
 # baseCreateKernelTree
 #--------------------------------------
 function baseCreateKernelTree {
+    # Create a copy of the kernel source tree under /kernel-tree/ for stripping
+    # operations
     echo "Creating copy of kernel tree for strip operations"
     mkdir -p /kernel-tree
     cp -a /lib/modules/* /kernel-tree/
@@ -826,6 +843,8 @@ function baseCreateKernelTree {
 # baseSyncKernelTree
 #--------------------------------------
 function baseSyncKernelTree {
+    # Overwrite the original kernel tree with a minimized version from
+    # /kernel-tree/.
     echo "Replace kernel tree with downsized version"
     rm -rf /lib/modules/*
     cp -a /kernel-tree/* /lib/modules/
@@ -1086,9 +1105,9 @@ function debianStripKernel {
 #--------------------------------------
 function suseSetupProduct {
     # /.../
-    # This function will create the /etc/products.d/baseproduct
+    # This function creates the /etc/products.d/baseproduct
     # link pointing to the product referenced by either
-    # the /etc/SuSE-brand or /etc/os-release file or the latest .prod file
+    # /etc/SuSE-brand or /etc/os-release or the latest .prod file
     # available in /etc/products.d
     # ----
     local prod=undef
@@ -1187,22 +1206,6 @@ function suseCleanup {
 }
 
 #======================================
-# suseRemovePackagesMarkedForDeletion
-#--------------------------------------
-function suseRemovePackagesMarkedForDeletion {
-    # /.../
-    # This function removes all packages which are
-    # added into the <packages type="delete"> section
-    # ----
-    local packs
-    local final
-    packs=$(baseGetPackagesForDeletion)
-    final=$(rpm -q "${packs}" | grep -v "is not installed")
-    echo "suseRemovePackagesMarkedForDeletion: ${final}"
-    Rpm -e --nodeps --noscripts "${final}"
-}
-
-#======================================
 # suseRemoveYaST
 #--------------------------------------
 function suseRemoveYaST {
@@ -1212,7 +1215,12 @@ function suseRemoveYaST {
     if [ -e /var/lib/autoinstall/autoconf/autoconf.xml ];then
         return
     fi
-    rpm -qa | grep yast | xargs rpm -e --nodeps
+    local yast_pkgs
+    # prevent non-zero exit status when no yast packages were found
+    yast_pkgs=$(rpm -qa | grep yast || :)
+    if [ "${yast_pkgs}" != "" ];then
+        echo "${yast_pkgs}" | xargs rpm -e --nodeps
+    fi
 }
 
 #======================================

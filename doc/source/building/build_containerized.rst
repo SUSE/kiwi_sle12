@@ -62,7 +62,7 @@ The Dice packages and sources are available at the following locations:
 
 * Build service project:
   http://download.opensuse.org/repositories/Virtualization:/Appliances:/ContainerBuilder
-* Sources: https://github.com/SUSE/dice
+* Sources: https://github.com/OSInside/dice
 
 .. code:: bash
 
@@ -241,8 +241,8 @@ command will build the image:
 
     $ cd <git-clone-result-kiwi-descriptions>
 
-    $ dice build suse/x86_64/suse-leap-42.3-JeOS
-    $ dice status suse/x86_64/suse-leap-42.3-JeOS
+    $ dice build suse/x86_64/{exc_description}
+    $ dice status suse/x86_64/{exc_description}
 
 
 Buildsystem Backends

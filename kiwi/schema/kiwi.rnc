@@ -59,7 +59,7 @@ div {
         attribute xsi:schemaLocation { xsd:anyURI }
     k.image.schemaversion.attribute =
         ## The allowed Schema version (fixed value)
-        attribute schemaversion { "6.9" }
+        attribute schemaversion { "7.1" }
     k.image.id =
         ## An identification number which is represented in a file
         ## named /etc/ImageID
@@ -242,28 +242,6 @@ div {
 }
 
 #==========================================
-# common element <configuration>
-#
-div {
-    k.configuration.source.attribute = k.source.attribute
-    k.configuration.dest.attribute = k.dest.attribute
-    k.configuration.arch.attribute = k.arch.attribute
-    k.configuration.attlist = 
-        k.configuration.source.attribute &
-        k.configuration.dest.attribute &
-        k.configuration.arch.attribute?
-
-    k.configuration =
-        ## As part of the network deploy configuration this section
-        ## specifies the configuration files which should be included
-        ## into the image after deployment
-        element configuration {
-            k.configuration.attlist,
-            empty
-        }
-}
-
-#==========================================
 # common element <contact>
 #
 div {
@@ -311,34 +289,6 @@ div {
 }
 
 #==========================================
-# common element <initrd>
-#
-div {
-    k.initrd.attlist = empty
-    k.initrd =
-        ## As part of the network deploy configuration this element
-        ## specifies where the boot image (initrd) can be found
-        element initrd {
-            k.initrd.attlist,
-            text
-        }
-}
-
-#==========================================
-# common element <kernel>
-#
-div {
-    k.kernel.attlist = empty
-    k.kernel =
-        ## As part of the network deploy configuration this section
-        ## specifies the where to find the boot kernel
-        element kernel {
-            k.kernel.attlist,
-            text
-        }
-}
-
-#==========================================
 # common element <keytable>
 #
 div {
@@ -363,6 +313,27 @@ div { # locale
             locale-name
         }
 }
+
+
+#==========================================
+# common element <rpm-locale-filtering>
+#
+div {
+    k.rpm-locale-filtering.content = xsd:boolean
+    k.rpm-locale-filtering.attlist = empty
+    k.rpm-locale-filtering =
+        # locale-filtering sets the install_lang macro for rpm based
+        # installations to the configured locale list. This results
+        # in language specific files to become filtered out by rpm
+        # if they don't match the configured list. Please note it
+        # depends on the package design if the install_lang macro
+        # contents apply to the package or not.
+        element rpm-locale-filtering {
+            k.rpm-locale-filtering.attlist,
+            k.rpm-locale-filtering.content
+        }
+}
+
 
 #==========================================
 # common element <namedCollection>
@@ -844,23 +815,6 @@ div {
 }
 
 #==========================================
-# common element <partitions>
-#
-div {
-    k.partitions.device.attribute =
-        ## As part of the network deploy configuration this section
-        ## specifies the disk device name
-        attribute device { text }
-    k.partitions.attlist = k.partitions.device.attribute?
-    k.partitions =
-        ## A List of Partitions
-        element partitions { 
-            k.partitions.attlist, 
-            k.partition+
-        }
-}
-
-#==========================================
 # common element <profile>
 #
 div {
@@ -916,10 +870,8 @@ div {
     k.repository.type.attribute =
         ## Type of repository
         attribute type {
-        "apt-deb" | "apt-rpm" | "deb-dir" | "mirrors" | "red-carpet" |
-        "rpm-dir" | "rpm-md"  | "slack-site" | "up2date-mirrors" | "urpmi" |
-        "yast2"
-    }
+            "apt-deb" | "apt-rpm" | "deb-dir" | "mirrors" | "rpm-dir" | "rpm-md"
+        }
     k.repository.alias.attribute =
         ## Alias name to be used for this repository. This is an
         ## optional free form text. If not set the source attribute
@@ -950,7 +902,7 @@ div {
         ## appended into the repository configuration file.
         attribute repository_gpgcheck { xsd:boolean }
     k.repository.package_gpgcheck.attribute =
-        ## Specify whether or not this specific repository is configured to
+        ## Specify whether or not this specific repository is configured
         ## to run package signature validation. If not set, no value is
         ## appended into the repository configuration file.
         attribute package_gpgcheck { xsd:boolean }
@@ -1133,19 +1085,6 @@ div {
 }
 
 #==========================================
-# common element <timeout>
-#
-div {
-    k.timeout.attlist = empty
-    k.timeout = 
-        ## Specifies an ATFTP Download Timeout
-        element timeout {
-            k.timeout.attlist,
-            text
-        }
-}
-
-#==========================================
 # common element <timezone>
 #
 div {
@@ -1296,6 +1235,35 @@ div {
         >> sch:pattern [ id = "spare_part" is-a = "image_type"
             sch:param [ name = "attr" value = "spare_part" ]
             sch:param [ name = "types" value = "oem vmx" ]
+        ]
+    k.type.spare_part_mountpoint.attribute =
+        ## Specify mount point for spare partition in the system.
+        ## Can only be configured for the disk image types oem and vmx
+        attribute spare_part_mountpoint { text }
+        >> sch:pattern [ id = "spare_part_mountpoint" is-a = "image_type"
+            sch:param [ name = "attr" value = "spare_part_mountpoint" ]
+            sch:param [ name = "types" value = "oem vmx" ]
+        ]
+    k.type.spare_part_fs.attribute =
+        ## Specify filesystem for spare partition in the system.
+        ## Can only be configured for the disk image types oem and vmx
+        attribute spare_part_fs {
+            "btrfs" | "ext2" | "ext3" | "ext4" | "xfs"
+        }
+        >> sch:pattern [ id = "spare_part_fs" is-a = "image_type"
+            sch:param [ name = "attr" value = "spare_part_fs" ]
+            sch:param [ name = "types" value = "oem vmx" ]
+        ]
+    k.type.spare_part_is_last.attribute =
+        ## Specify if the spare partition should be the last one in
+        ## the partition table. Can only be configured for the vmx
+        ## disk image type. By default the root partition is the last
+        ## one and the spare partition lives behind it. With this
+        ## attribute that setup can be toggled.
+        attribute spare_part_is_last { xsd:boolean }
+        >> sch:pattern [ id = "spare_part_is_last" is-a = "image_type"
+            sch:param [ name = "attr" value = "spare_part_is_last" ]
+            sch:param [ name = "types" value = "vmx" ]
         ]
     k.type.zipl_targettype.attribute =
         ## The device type of the disk zipl should boot. On zFCP
@@ -1778,6 +1746,9 @@ div {
         k.type.ramonly.attribute? &
         k.type.rootfs_label.attribute? &
         k.type.spare_part.attribute? &
+        k.type.spare_part_mountpoint.attribute? &
+        k.type.spare_part_fs.attribute? &
+        k.type.spare_part_is_last.attribute? &
         k.type.target_blocksize.attribute? &
         k.type.target_removable.attribute? &
         k.type.vga.attribute? &
@@ -1795,40 +1766,9 @@ div {
             k.containerconfig? &
             k.machine? &
             k.oemconfig? &
-            k.pxedeploy? &
             k.size? &
             k.systemdisk? &
             k.vagrantconfig*
-        }
-}
-
-#==========================================
-# common element <union>
-#
-div {
-    k.union.ro.attribute =
-        ## Device only for read-only 
-        attribute ro { text }
-    k.union.rw.attribute =
-        ## Device for Read-Write
-        attribute rw { text }
-    k.union.type.attribute =
-        ## Union type to use to overlay read-write and read-only parts
-        attribute type { "overlayfs" }
-    k.union.attlist =
-        k.union.ro.attribute &
-        k.union.rw.attribute &
-        k.union.type.attribute
-    
-    k.union =  
-        ## As part of the network deploy configuration this section
-        ## specifies the overlay filesystem setup if required by the
-        ## filesystem type of the system image.An overlay setup is
-        ## only required if the system image uses a squashfs
-        ## compressed filesystem.
-        element union {
-            k.union.attlist,
-            empty
         }
 }
 
@@ -1864,7 +1804,7 @@ div {
         k.user.home.attribute &
         k.user.id.attribute? &
         k.user.name.attribute &
-        k.user.password.attribute? &
+        k.user.password.attribute &
         k.user.pwdformat? &
         k.user.realname.attribute? &
         k.user.shell.attribute?
@@ -2043,32 +1983,6 @@ div {
         element volume {
             k.volume.attlist,
             empty
-        }
-}
-
-#==========================================
-# main block: <pxedeploy>
-#
-div {
-    k.pxedeploy.server.attribute =
-        ## Name or IP Address of server for downloading the data
-        attribute server { text }
-    k.pxedeploy.blocksize.attribute = 
-        ## Blocksize value used for atftp downloads
-        attribute blocksize { xsd:nonNegativeInteger }
-    k.pxedeploy.attlist =
-        k.pxedeploy.server.attribute? &
-        k.pxedeploy.blocksize.attribute?
-    k.pxedeploy =
-        ## Controls the Image Deploy Process
-        element pxedeploy {
-            k.pxedeploy.attlist &
-            k.timeout? &
-            k.kernel? &
-            k.initrd? &
-            k.partitions? &
-            k.union? &
-            k.configuration*
         }
 }
 
@@ -2482,9 +2396,28 @@ div {
 # main block: <vagrantconfig>
 #
 div {
+    sch:pattern [
+        abstract = "true"
+        id = "vagrant_provider"
+        sch:rule [
+            context = "vagrantconfig[@$attr]"
+            sch:assert [
+                test = "contains('$providers', @provider)"
+                "$attr attribute is only available for the following "
+                "vagrant providers: $providers"
+            ]
+        ]
+    ]
     k.vagrantconfig.provider.attribute =
         ## The vagrant provider for this box
-        attribute provider { "libvirt" }
+        attribute provider { "libvirt" | "virtualbox" }
+    k.vagrantconfig.virtualbox_guest_additions_present.attribute =
+        ## Guest additions are present in this box
+        attribute virtualbox_guest_additions_present { xsd:boolean }
+        >> sch:pattern [ id = "virtualbox_guest_additions_present" is-a = "vagrant_provider"
+            sch:param [ name = "attr" value = "virtualbox_guest_additions_present" ]
+            sch:param [ name = "providers" value = "virtualbox" ]
+        ]
     k.vagrantconfig.virtualsize.attribute =
         ## virtualsize provides the value of the virtual_size key which
         ## is embedded in the metadata.json hash inside the box file, as
@@ -2499,7 +2432,8 @@ div {
     k.vagrantconfig.attlist =
         k.vagrantconfig.provider.attribute &
         k.vagrantconfig.virtualsize.attribute &
-        k.vagrantconfig.boxname.attribute?
+        k.vagrantconfig.boxname.attribute? &
+        k.vagrantconfig.virtualbox_guest_additions_present.attribute?
     k.vagrantconfig =
         ## The vagrantconfig element specifies the Vagrant meta
         ## configuration options which are used inside a vagrant box
@@ -2598,7 +2532,7 @@ div {
         }
     k.packages.profiles.attribute = k.profiles.attribute
     k.packages.patternType.attribute =
-        ## Selection type for patterns. Could be onlyRequired
+        ## Selection type for patterns. Can be onlyRequired
         ## or plusRecommended
         attribute patternType {
             "onlyRequired" | "plusRecommended"
@@ -2638,6 +2572,7 @@ div {
             k.keytable? &
             k.locale? &
             k.packagemanager? &
+            k.rpm-locale-filtering? &
             k.rpm-check-signatures? &
             k.rpm-excludedocs? &
             k.showlicense* &

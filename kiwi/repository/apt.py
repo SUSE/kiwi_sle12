@@ -29,7 +29,8 @@ class RepositoryApt(RepositoryBase):
     """
     **Implements repository handling for apt-get package manager**
 
-    :param str shared_apt_get_dir: shared directory between image root and build system root
+    :param str shared_apt_get_dir:
+        shared directory between image root and build system root
     :param str runtime_apt_get_config_file: apt-get runtime config file name
     :param list apt_get_args: apt-get caller arguments
     :param dict command_env: customized os.environ for apt-get
@@ -92,6 +93,14 @@ class RepositoryApt(RepositoryBase):
         self.apt_conf = PackageManagerTemplateAptGet()
         self._write_runtime_config()
 
+    def setup_package_database_configuration(self):
+        """
+        Setup package database configuration
+
+        No special database configuration required for apt
+        """
+        pass
+
     def use_default_location(self):
         """
         Setup apt-get repository operations to store all data
@@ -150,12 +159,10 @@ class RepositoryApt(RepositoryBase):
         if not components:
             components = 'main'
         with open(list_file, 'w') as repo:
-            if repo_gpgcheck is None:
-                repo_line = 'deb {0}'.format(uri)
+            if repo_gpgcheck is False:
+                repo_line = 'deb [trusted=yes check-valid-until=no] {0}'.format(uri)
             else:
-                repo_line = 'deb [trusted={0}] {1}'.format(
-                    'no' if repo_gpgcheck else 'yes', uri
-                )
+                repo_line = 'deb {0}'.format(uri)
             if not dist:
                 # create a debian flat repository setup. We consider the
                 # repository metadata to exist on the toplevel of the

@@ -20,15 +20,12 @@ from six.moves.configparser import ConfigParser
 from tempfile import NamedTemporaryFile
 
 # project
+from kiwi.defaults import Defaults
 from kiwi.command import Command
 from kiwi.repository.base import RepositoryBase
 from kiwi.system.uri import Uri
 from kiwi.path import Path
-from kiwi.defaults import Defaults
-
-from kiwi.exceptions import (
-    KiwiRepoTypeUnknown
-)
+from kiwi.utils.rpm_database import RpmDataBase
 
 
 class RepositoryZypper(RepositoryBase):
@@ -66,6 +63,12 @@ class RepositoryZypper(RepositoryBase):
         if 'check_signatures' in self.custom_args:
             self.custom_args.remove('check_signatures')
             self.gpgcheck = True
+
+        self.locale = list(
+            item for item in self.custom_args if '_install_langs' in item
+        )
+        if self.locale:
+            self.custom_args.remove(self.locale[0])
 
         self.repo_names = []
 
@@ -144,6 +147,65 @@ class RepositoryZypper(RepositoryBase):
 
         self._write_runtime_config()
 
+    def setup_package_database_configuration(self):
+        """
+        Setup rpm macros for bootstrapping and image building
+
+        1. Create the rpm image macro which persists during the build
+        2. Create the rpm bootstrap macro to make sure for bootstrapping
+           the rpm database location matches the host rpm database setup.
+           This macro only persists during the bootstrap phase. If the
+           image was already bootstrapped a compat link is created instead.
+        3. Create zypper compat link
+        """
+        rpmdb = RpmDataBase(
+            self.root_dir, Defaults.get_custom_rpm_image_macro_name()
+        )
+        if self.locale:
+            rpmdb.set_macro_from_string(self.locale[0])
+        rpmdb.write_config()
+
+        rpmdb = RpmDataBase(self.root_dir)
+        if rpmdb.has_rpm():
+            rpmdb.link_database_to_host_path()
+        else:
+            rpmdb.set_database_to_host_path()
+        # Zypper compat code:
+        #
+        # Manually adding the compat link /var/lib/rpm that points to the
+        # rpmdb location as it is configured in the host rpm setup. The
+        # host rpm setup is taken into account because import_trusted_keys
+        # is called during the bootstrap phase where rpm (respectively zypper)
+        # is called from the host
+        #
+        # Usually it is expected that the package manager reads the
+        # signing keys from the rpm database setup provisioned by rpm
+        # itself (macro level) but zypper doesn't take the rpm macro
+        # setup into account and relies on a hard coded path which we
+        # can only provide as a symlink.
+        #
+        # That symlink is usually created by the rpm package when it gets
+        # installed. However at that early phase when we import the
+        # signing keys no rpm is installed yet nor any symlink exists.
+        # Thus we have to create it here and hope to get rid of it in the
+        # future.
+        #
+        # For further details on the motivation in zypper please
+        # refer to bsc#1112357
+        rpmdb.init_database()
+        Path.create(
+            os.sep.join([self.root_dir, 'var', 'lib'])
+        )
+        Command.run(
+            [
+                'ln', '-s', ''.join(
+                    ['../..', rpmdb.rpmdb_host.expand_query('%_dbpath')]
+                ), os.sep.join(
+                    [self.root_dir, 'var', 'lib', 'rpm']
+                )
+            ], raise_on_error=False
+        )
+
     def use_default_location(self):
         """
         Setup zypper repository operations to store all data
@@ -214,20 +276,31 @@ class RepositoryZypper(RepositoryBase):
             Path.wipe(repo_file)
 
         self._backup_package_cache()
-        Command.run(
-            ['zypper'] + self.zypper_args + [
-                '--root', self.root_dir,
-                'addrepo',
-                '--refresh',
-                '--type', self._translate_repo_type(repo_type),
-                '--keep-packages' if Uri(uri).is_remote() else
-                '--no-keep-packages',
-                '-C',
-                uri,
-                name
-            ],
-            self.command_env
-        )
+        zypper_addrepo_command = ['zypper'] + self.zypper_args + [
+            '--root', self.root_dir,
+            'addrepo',
+            '--refresh',
+            '--keep-packages' if Uri(uri).is_remote() else
+            '--no-keep-packages',
+            '--no-check',
+            uri,
+            name
+        ]
+        try:
+            Command.run(
+                zypper_addrepo_command, self.command_env
+            )
+        except Exception:
+            # for whatever reason zypper sometimes failes with
+            # a 'failed to cache rpm database' error. I could not
+            # find any reason why and a simple recall of the exact
+            # same command in the exact same environment works.
+            # Thus the stupid but simple workaround to this problem
+            # is try one recall before really failing
+            Command.run(
+                zypper_addrepo_command, self.command_env
+            )
+
         if prio or repo_gpgcheck is not None or pkg_gpgcheck is not None:
             repo_config = ConfigParser()
             repo_config.read(repo_file)
@@ -253,12 +326,9 @@ class RepositoryZypper(RepositoryBase):
 
         :param list signing_keys: list of the key files to import
         """
+        rpmdb = RpmDataBase(self.root_dir)
         for key in signing_keys:
-            # Including --dbpath flag is a workaround for bsc#1112357
-            Command.run([
-                'rpm', '--root', self.root_dir, '--import',
-                key, '--dbpath', Defaults.get_default_rpmdb_path()
-            ])
+            rpmdb.import_signing_key_to_image(key)
 
     def delete_repo(self, name):
         """
@@ -336,23 +406,6 @@ class RepositoryZypper(RepositoryBase):
             self.runtime_zypper_config.write(config)
         with open(self.runtime_zypp_config_file.name, 'w') as config:
             self.runtime_zypp_config.write(config)
-
-    def _translate_repo_type(self, repo_type):
-        """
-            Translate kiwi supported common repo type names from the schema
-            into the name the zyper package manager understands
-        """
-        zypper_type_for = {
-            'rpm-md': 'YUM',
-            'rpm-dir': 'Plaindir',
-            'yast2': 'YaST'
-        }
-        try:
-            return zypper_type_for[repo_type]
-        except Exception:
-            raise KiwiRepoTypeUnknown(
-                'Unsupported zypper repo type: %s' % repo_type
-            )
 
     def _backup_package_cache(self):
         """

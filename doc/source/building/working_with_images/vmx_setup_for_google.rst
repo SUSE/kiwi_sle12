@@ -55,12 +55,12 @@ description as follows:
       <type image="oem"
             initrd_system="dracut"
             filesystem="ext4" boottimeout="1"
-            kernelcmdline="console=ttyS0,38400n8 net.ifnames=0 NON_PERSISTENT_DEVICE_NAMES=1"
+            kernelcmdline="console=ttyS0,38400n8 net.ifnames=0"
             format="gce"
-            bootloader="grub2"
+            bootloader="grub2">
         <size unit="M">10240</size>
         <oemconfig>
-          <oem-swap>false</oem-swap>
+            <oem-swap>false</oem-swap>
         </oemconfig>
       </type>
 

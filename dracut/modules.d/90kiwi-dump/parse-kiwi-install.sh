@@ -7,6 +7,10 @@ type getarg >/dev/null 2>&1 || . /lib/dracut-lib.sh
 
 if getargbool 0 rd.kiwi.install.pxe; then
     root="install:REMOTE"
+    echo "rd.neednet=1" > /etc/cmdline.d/kiwi-generated.conf
+    if ! getarg "ip="; then
+        echo "ip=dhcp" >> /etc/cmdline.d/kiwi-generated.conf
+    fi
 fi
 
 if [ "${root%%:*}" = "install" ] ; then
@@ -20,7 +24,7 @@ modprobe -q loop
 case "${installroot}" in
     install:CDLABEL=*|CDLABEL=*) \
         root="${root#install:}"
-        root="$(echo "${root}" | sed 's,/,\\x2f,g')"
+        root="${root//\//\\x2f}"
         root="install:/dev/disk/by-label/${root#CDLABEL=}"
         rootok=1 ;;
 

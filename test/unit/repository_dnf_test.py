@@ -27,7 +27,9 @@ class TestRepositoryDnf(object):
         )
         root_bind.root_dir = '../data'
         root_bind.shared_location = '/shared-dir'
-        self.repo = RepositoryDnf(root_bind, ['exclude_docs'])
+        self.repo = RepositoryDnf(
+            root_bind, ['exclude_docs', '_install_langs%en_US:de_DE']
+        )
 
         assert runtime_dnf_config.set.call_args_list == [
             call('main', 'cachedir', '/shared-dir/dnf/cache'),
@@ -35,9 +37,7 @@ class TestRepositoryDnf(object):
             call('main', 'pluginconfpath', '/shared-dir/dnf/pluginconf'),
             call('main', 'keepcache', '1'),
             call('main', 'debuglevel', '2'),
-            call('main', 'pkgpolicy', 'newest'),
-            call('main', 'tolerant', '0'),
-            call('main', 'exactarch', '1'),
+            call('main', 'best', '1'),
             call('main', 'obsoletes', '1'),
             call('main', 'plugins', '1'),
             call('main', 'gpgcheck', '0'),
@@ -74,9 +74,7 @@ class TestRepositoryDnf(object):
             call('main', 'pluginconfpath', '../data/etc/dnf/plugins'),
             call('main', 'keepcache', '1'),
             call('main', 'debuglevel', '2'),
-            call('main', 'pkgpolicy', 'newest'),
-            call('main', 'tolerant', '0'),
-            call('main', 'exactarch', '1'),
+            call('main', 'best', '1'),
             call('main', 'obsoletes', '1'),
             call('main', 'plugins', '1'),
             call('main', 'gpgcheck', '0'),
@@ -110,6 +108,40 @@ class TestRepositoryDnf(object):
             '/shared-dir/dnf/repos/foo.repo', 'w'
         )
 
+    @patch('kiwi.repository.dnf.RpmDataBase')
+    def test_setup_package_database_configuration(self, mock_RpmDataBase):
+        rpmdb = mock.Mock()
+        rpmdb.has_rpm.return_value = False
+        mock_RpmDataBase.return_value = rpmdb
+        self.repo.setup_package_database_configuration()
+        assert mock_RpmDataBase.call_args_list == [
+            call('../data', 'macros.kiwi-image-config'),
+            call('../data')
+        ]
+        rpmdb.set_macro_from_string.assert_called_once_with(
+            '_install_langs%en_US:de_DE'
+        )
+        rpmdb.write_config.assert_called_once_with()
+        rpmdb.set_database_to_host_path.assert_called_once_with()
+
+    @patch('kiwi.repository.dnf.RpmDataBase')
+    def test_setup_package_database_configuration_bootstrapped_system(
+        self, mock_RpmDataBase
+    ):
+        rpmdb = mock.Mock()
+        rpmdb.has_rpm.return_value = True
+        mock_RpmDataBase.return_value = rpmdb
+        self.repo.setup_package_database_configuration()
+        assert mock_RpmDataBase.call_args_list == [
+            call('../data', 'macros.kiwi-image-config'),
+            call('../data')
+        ]
+        rpmdb.set_macro_from_string.assert_called_once_with(
+            '_install_langs%en_US:de_DE'
+        )
+        rpmdb.write_config.assert_called_once_with()
+        rpmdb.link_database_to_host_path.assert_called_once_with()
+
     @patch('kiwi.repository.dnf.ConfigParser')
     @patch('os.path.exists')
     @patch_open
@@ -137,12 +169,15 @@ class TestRepositoryDnf(object):
             '/shared-dir/dnf/repos/foo.repo', 'w'
         )
 
-    @patch('kiwi.command.Command.run')
-    def test_import_trusted_keys(self, mock_run):
-        self.repo.import_trusted_keys(['key-file-a.asc', 'key-file-b.asc'])
-        assert mock_run.call_args_list == [
-            call(['rpm', '--root', '../data', '--import', 'key-file-a.asc']),
-            call(['rpm', '--root', '../data', '--import', 'key-file-b.asc'])
+    @patch('kiwi.repository.dnf.RpmDataBase')
+    def test_import_trusted_keys(self, mock_RpmDataBase):
+        rpmdb = mock.Mock()
+        mock_RpmDataBase.return_value = rpmdb
+        signing_keys = ['key-file-a.asc', 'key-file-b.asc']
+        self.repo.import_trusted_keys(signing_keys)
+        assert rpmdb.import_signing_key_to_image.call_args_list == [
+            call('key-file-a.asc'),
+            call('key-file-b.asc')
         ]
 
     @patch('kiwi.path.Path.wipe')

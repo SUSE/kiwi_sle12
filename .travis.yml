@@ -10,9 +10,13 @@ stages:
 jobs:
   include:
   - python: 3.6
-    env: TOXENV=unit_py3_6,check,doc
+    env: TOXENV=check,unit_py3_6
+  - python: 3.7
+    dist: xenial
+    sudo: true
+    env: TOXENV=check,unit_py3_7
   - python: 2.7
-    env: TOXENV=unit_py2_7,check,doc
+    env: TOXENV=check,unit_py2_7
 
 before_install:
 - sudo apt-get update -qq
@@ -27,4 +31,4 @@ install:
 - pip install tox
 
 script:
-- tox
+- tox "-n $(nproc)"

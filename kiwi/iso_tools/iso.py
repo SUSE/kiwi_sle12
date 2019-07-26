@@ -28,7 +28,6 @@ from builtins import bytes
 from kiwi.iso_tools.cdrtools import IsoToolsCdrTools
 from kiwi.logger import log
 from kiwi.defaults import Defaults
-from kiwi.path import Path
 from kiwi.command import Command
 from kiwi.utils.codec import Codec
 from kiwi.exceptions import (
@@ -54,8 +53,8 @@ class Iso(object):
         self.header_end_file = self.source_dir + '/' + self.header_end_name
         self.boot_path = Defaults.get_iso_boot_path()
 
-    @classmethod
-    def create_hybrid(cls, offset, mbrid, isofile, efi_mode=False):
+    @staticmethod
+    def create_hybrid(offset, mbrid, isofile, efi_mode=False):
         """
         Create hybrid ISO
 
@@ -108,8 +107,8 @@ class Iso(object):
                     )
                 )
 
-    @classmethod
-    def set_media_tag(cls, isofile):
+    @staticmethod
+    def set_media_tag(isofile):
         """
         Include checksum tag in the ISO so it can be verified with
         the mediacheck program.
@@ -126,8 +125,8 @@ class Iso(object):
             ]
         )
 
-    @classmethod
-    def relocate_boot_catalog(cls, isofile):
+    @staticmethod
+    def relocate_boot_catalog(isofile):
         """
         Move ISO boot catalog to the standardized place
 
@@ -186,8 +185,8 @@ class Iso(object):
                         new_boot_catalog_sector
                     )
 
-    @classmethod
-    def fix_boot_catalog(cls, isofile):
+    @staticmethod
+    def fix_boot_catalog(isofile):
         """
         Fixup inconsistencies in boot catalog
 
@@ -332,16 +331,18 @@ class Iso(object):
             # isolinux-config was not able to identify the isolinux
             # signature. As a workaround a compat directory /isolinux
             # is created which hardlinks all loader files
-            compat_base_directory = self.source_dir + '/isolinux'
-            loader_files = '/'.join(
-                [self.source_dir, self.boot_path, 'loader/*']
+            loader_source_directory = os.sep.join(
+                [self.source_dir, loader_base_directory]
             )
-            Path.create(compat_base_directory)
-            bash_command = ' '.join(
-                ['ln', loader_files, compat_base_directory]
+            loader_compat_target_directory = os.sep.join(
+                [self.source_dir, 'isolinux']
             )
             Command.run(
-                ['bash', '-c', bash_command]
+                [
+                    'cp', '-a', '-l',
+                    loader_source_directory + os.sep,
+                    loader_compat_target_directory + os.sep
+                ]
             )
 
     @staticmethod

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<image schemaversion="6.9" name="LimeJeOS-DASD-ECKD-SLE12-Community">
+<image schemaversion="7.1" name="LimeJeOS-DASD-ECKD-SLE12-Community">
     <description type="system">
         <author>Marcus Schaefer</author>
         <contact>ms@suse.com</contact>
@@ -36,6 +36,9 @@
     </repository>
     <repository type="rpm-md" alias="Tumbleweed" priority="2">
         <source path="obs://openSUSE:Factory:zSystems/standard"/>
+    </repository>
+    <repository type="rpm-md" alias="Tumbleweed-base" priority="4">
+        <source path="obs://openSUSE:Factory/ports"/>
     </repository>
     <packages type="image">
         <package name="patterns-openSUSE-base"/>

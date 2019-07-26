@@ -21,14 +21,15 @@ import collections
 # project
 from .command import Command
 from .logger import log
+from .exceptions import KiwiFileAccessError
 
 
 class Path(object):
     """
     **Directory path helpers**
     """
-    @classmethod
-    def sort_by_hierarchy(cls, path_list):
+    @staticmethod
+    def sort_by_hierarchy(path_list):
         """
         Sort given list of path names by their hierachy in the tree
 
@@ -60,8 +61,42 @@ class Path(object):
                 ordered_paths.append(path)
         return ordered_paths
 
-    @classmethod
-    def create(cls, path):
+    @staticmethod
+    def access(path, mode, **kwargs):
+        """
+        Check whether path can be accessed with the given mode.
+
+        :param str path: The path that should be checked for
+            access.
+
+        :param int mode: Which access mode should be checked.
+            This value must be a bit-wise or of one or more of the following
+            constants: :py:const:`os.F_OK` (note that this one is zero),
+            :py:const:`os.X_OK`, :py:const:`os.R_OK` and :py:const:`os.W_OK`
+
+        :param kwargs: further keyword arguments are forwarded to
+            :func:`os.access`
+
+        :return: Boolean value whether this access mode is allowed
+        :rtype: bool
+
+        :raises ValueError: if the supplied mode is invalid
+        :raises kiwi.exceptions.KiwiFileNotFound: if the path does not exist or
+            is not accessible by the current user
+        """
+        if mode & ~(os.F_OK | os.X_OK | os.R_OK | os.W_OK) != 0:
+            raise ValueError("Invalid mode 0x{:X}".format(mode))
+        try:
+            os.stat(path)
+        except Exception as exc:
+            raise KiwiFileAccessError(
+                'Error accessing path {0} failed with: {1}'.format(path, exc)
+            )
+
+        return os.access(path, mode, **kwargs)
+
+    @staticmethod
+    def create(path):
         """
         Create path and all sub directories to target
 
@@ -71,8 +106,8 @@ class Path(object):
             ['mkdir', '-p', path]
         )
 
-    @classmethod
-    def wipe(cls, path):
+    @staticmethod
+    def wipe(path):
         """
         Delete path and all contents
 
@@ -82,8 +117,8 @@ class Path(object):
             ['rm', '-r', '-f', path]
         )
 
-    @classmethod
-    def remove(cls, path):
+    @staticmethod
+    def remove(path):
         """
         Delete empty path, causes an error if target is not empty
 
@@ -93,8 +128,8 @@ class Path(object):
             ['rmdir', path]
         )
 
-    @classmethod
-    def remove_hierarchy(cls, path):
+    @staticmethod
+    def remove_hierarchy(path):
         """
         Recursively remove an empty path and its sub directories
         ignore non empty or protected paths and leave them untouched
@@ -106,7 +141,7 @@ class Path(object):
         )
         path_elements = path.split(os.sep)
         protected_elements = [
-            'boot', 'dev', 'proc', 'run', 'sys', 'tmp'
+            'boot', 'dev', 'proc', 'run', 'sys', 'tmp', 'home'
         ]
         for path_index in reversed(range(0, len(path_elements))):
             sub_path = os.sep.join(path_elements[0:path_index])
@@ -122,9 +157,9 @@ class Path(object):
                     ['rmdir', '--ignore-fail-on-non-empty', sub_path]
                 )
 
-    @classmethod
+    @staticmethod
     def which(
-        cls, filename, alternative_lookup_paths=None,
+        filename, alternative_lookup_paths=None,
         custom_env=None, access_mode=None
     ):
         """

@@ -1,18 +1,23 @@
-from mock import call, patch
+from builtins import bytes
+from mock import (
+    call, patch
+)
 import mock
 import struct
-from .test_helper import raises, patch_open
+import pytest
 import sys
-from builtins import bytes
+
+from .test_helper import raises, patch_open
+
+from kiwi.iso_tools.iso import Iso
+from kiwi.path import Path
+from tempfile import NamedTemporaryFile
 
 from kiwi.exceptions import (
     KiwiIsoLoaderError,
     KiwiIsoMetaDataError,
     KiwiCommandError
 )
-
-from kiwi.iso_tools.iso import Iso
-from tempfile import NamedTemporaryFile
 
 
 class TestIso(object):
@@ -56,10 +61,9 @@ class TestIso(object):
         )
 
     @patch('kiwi.iso_tools.iso.Command.run')
-    @patch('kiwi.iso_tools.iso.Path.create')
     @patch('os.path.exists')
     def test_setup_isolinux_boot_path_failed_isolinux_config(
-        self, mock_exists, mock_path, mock_command
+        self, mock_exists, mock_command
     ):
         mock_exists.return_value = True
         command_raises = [False, True]
@@ -70,28 +74,57 @@ class TestIso(object):
 
         mock_command.side_effect = side_effect
         self.iso.setup_isolinux_boot_path()
-        mock_path.assert_called_once_with('source-dir/isolinux')
         assert mock_command.call_args_list[1] == call(
             [
-                'bash', '-c',
-                'ln source-dir/boot/x86_64/loader/* source-dir/isolinux'
+                'cp', '-a', '-l',
+                'source-dir/boot/x86_64/loader/', 'source-dir/isolinux/'
             ]
         )
 
-    def test_create_header_end_block(self):
+    @pytest.mark.skipif(
+        Path.which('isoinfo') is None, reason='requires cdrtools'
+    )
+    def test_create_header_end_block_on_test_iso(self):
         temp_file = NamedTemporaryFile()
         self.iso.header_end_file = temp_file.name
         assert self.iso.create_header_end_block(
             '../data/iso_with_marker.iso'
         ) == 96
 
+    @patch_open
+    @patch('kiwi.iso_tools.iso.IsoToolsCdrTools')
+    def test_create_header_end_block(self, mock_IsoToolsCdrTools, mock_open):
+        mock_open.return_value = self.context_manager_mock
+        self.file_mock.read.return_value = bytes(
+            b'7984fc91-a43f-4e45-bf27-6d3aa08b24cf'
+        )
+        iso_tool = mock.Mock()
+        iso_tool.list_iso.return_value = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        mock_IsoToolsCdrTools.return_value = iso_tool
+        self.iso.create_header_end_block('some-iso-file')
+        assert mock_open.call_args_list == [
+            call('some-iso-file', 'rb'),
+            call('source-dir/header_end', 'wb')
+        ]
+
+    @pytest.mark.skipif(
+        Path.which('isoinfo') is None, reason='requires cdrtools'
+    )
     @raises(KiwiIsoLoaderError)
-    def test_create_header_end_block_raises(self):
+    def test_create_header_end_block_raises_on_test_iso(self):
         temp_file = NamedTemporaryFile()
         self.iso.header_end_file = temp_file.name
         self.iso.create_header_end_block(
             '../data/iso_no_marker.iso'
         )
+
+    @patch_open
+    @patch('kiwi.iso_tools.iso.IsoToolsCdrTools')
+    @raises(KiwiIsoLoaderError)
+    def test_create_header_end_block_raises(
+        self, mock_IsoToolsCdrTools, mock_open
+    ):
+        self.iso.create_header_end_block('some-iso-file')
 
     @patch('kiwi.iso_tools.iso.Command.run')
     def test_create_hybrid(self, mock_command):

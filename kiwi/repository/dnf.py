@@ -21,9 +21,10 @@ from six.moves.configparser import ConfigParser
 from tempfile import NamedTemporaryFile
 
 # project
+from kiwi.defaults import Defaults
 from kiwi.repository.base import RepositoryBase
 from kiwi.path import Path
-from kiwi.command import Command
+from kiwi.utils.rpm_database import RpmDataBase
 
 
 class RepositoryDnf(RepositoryBase):
@@ -61,6 +62,12 @@ class RepositoryDnf(RepositoryBase):
         else:
             self.gpg_check = '0'
 
+        self.locale = list(
+            item for item in self.custom_args if '_install_langs' in item
+        )
+        if self.locale:
+            self.custom_args.remove(self.locale[0])
+
         self.repo_names = []
 
         # dnf support is based on creating repo files which contains
@@ -90,6 +97,29 @@ class RepositoryDnf(RepositoryBase):
         self._create_runtime_config_parser()
         self._create_runtime_plugin_config_parser()
         self._write_runtime_config()
+
+    def setup_package_database_configuration(self):
+        """
+        Setup rpm macros for bootstrapping and image building
+
+        1. Create the rpm image macro which persists during the build
+        2. Create the rpm bootstrap macro to make sure for bootstrapping
+           the rpm database location matches the host rpm database setup.
+           This macro only persists during the bootstrap phase. If the
+           image was already bootstrapped a compat link is created instead.
+        """
+        rpmdb = RpmDataBase(
+            self.root_dir, Defaults.get_custom_rpm_image_macro_name()
+        )
+        if self.locale:
+            rpmdb.set_macro_from_string(self.locale[0])
+        rpmdb.write_config()
+
+        rpmdb = RpmDataBase(self.root_dir)
+        if rpmdb.has_rpm():
+            rpmdb.link_database_to_host_path()
+        else:
+            rpmdb.set_database_to_host_path()
 
     def use_default_location(self):
         """
@@ -174,8 +204,9 @@ class RepositoryDnf(RepositoryBase):
 
         :param list signing_keys: list of the key files to import
         """
+        rpmdb = RpmDataBase(self.root_dir)
         for key in signing_keys:
-            Command.run(['rpm', '--root', self.root_dir, '--import', key])
+            rpmdb.import_signing_key_to_image(key)
 
     def delete_repo(self, name):
         """
@@ -253,13 +284,7 @@ class RepositoryDnf(RepositoryBase):
             'main', 'debuglevel', '2'
         )
         self.runtime_dnf_config.set(
-            'main', 'pkgpolicy', 'newest'
-        )
-        self.runtime_dnf_config.set(
-            'main', 'tolerant', '0'
-        )
-        self.runtime_dnf_config.set(
-            'main', 'exactarch', '1'
+            'main', 'best', '1'
         )
         self.runtime_dnf_config.set(
             'main', 'obsoletes', '1'

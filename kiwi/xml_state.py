@@ -63,6 +63,25 @@ class XMLState(object):
             self.xml_data.get_preferences()
         )
 
+    def get_description_section(self):
+        """
+        The description section
+
+        :return: description_type tuple providing the elements
+            author contact and specification
+
+        :rtype: tuple
+        """
+        description_type = namedtuple(
+            'description_type', ['author', 'contact', 'specification']
+        )
+        description = self.xml_data.get_description()[0]
+        return description_type(
+            author=description.get_author()[0],
+            contact=description.get_contact()[0],
+            specification=description.get_specification()[0].strip()
+        )
+
     def get_users_sections(self):
         """
         All users sections for the selected profiles
@@ -123,6 +142,56 @@ class XMLState(object):
         else:
             initrd_system = self.build_type.get_initrd_system()
         return initrd_system
+
+    def get_locale(self):
+        """
+        Gets list of locale names if configured. Takes
+        the first locale setup from the existing preferences
+        sections into account.
+
+        :return: List of names or None
+
+        :rtype: list|None
+        """
+        for preferences in self.get_preferences_sections():
+            locale_section = preferences.get_locale()
+            if locale_section:
+                return locale_section[0].split(',')
+
+    def get_rpm_locale(self):
+        """
+        Gets list of locale names to filter out by rpm
+        if rpm-locale-filtering is switched on the
+        the list always contains: [POSIX, C, C.UTF-8]
+        and is extended by the optionaly configured
+        locale
+
+        :return: List of names or None
+
+        :rtype: list|None
+        """
+        if self.get_rpm_locale_filtering():
+            rpm_locale = ['POSIX', 'C', 'C.UTF-8']
+            configured_locale = self.get_locale()
+            if configured_locale:
+                for locale in configured_locale:
+                    rpm_locale.append(locale)
+            return rpm_locale
+
+    def get_rpm_locale_filtering(self):
+        """
+        Gets the rpm-locale-filtering configuration flag. Returns
+        False if not present.
+
+        :return: True or False
+
+        :rtype: bool
+        """
+        for preferences in self.get_preferences_sections():
+            locale_filtering = preferences.get_rpm_locale_filtering()
+            if locale_filtering:
+                return locale_filtering[0]
+        return False
 
     def get_rpm_excludedocs(self):
         """
@@ -581,18 +650,6 @@ class XMLState(object):
         if systemdisk_sections:
             return systemdisk_sections[0]
 
-    def get_build_type_pxedeploy_section(self):
-        """
-        First pxedeploy section from the build type section
-
-        :return: <pxedeploy> section reference
-
-        :rtype: xml_parse::pxedeploy
-        """
-        pxedeploy_sections = self.build_type.get_pxedeploy()
-        if pxedeploy_sections:
-            return pxedeploy_sections[0]
-
     def get_build_type_machine_section(self):
         """
         First machine section from the build type section
@@ -616,6 +673,21 @@ class XMLState(object):
         vagrant_config_sections = self.build_type.get_vagrantconfig()
         if vagrant_config_sections:
             return vagrant_config_sections[0]
+
+    def get_vagrant_config_virtualbox_guest_additions(self):
+        """
+        Attribute virtualbox_guest_additions_present from the first
+        vagrantconfig section.
+
+        :return: ``<vagrantconfig virtualbox_guest_additions_present=>`` value
+
+        :rtype: bool
+        """
+        vagrant_config_sections = self.get_build_type_vagrant_config_section()
+        if not vagrant_config_sections.virtualbox_guest_additions_present:
+            return Defaults.get_vagrant_config_virtualbox_guest_additions()
+        else:
+            return vagrant_config_sections.virtualbox_guest_additions_present
 
     def get_build_type_vmdisk_section(self):
         """
@@ -1873,7 +1945,9 @@ class XMLState(object):
                 if build_type == image_type.get_image():
                     return image_type
             raise KiwiTypeNotFound(
-                'build type %s not found' % build_type
+                'build type {0} not found in {1}'.format(
+                    build_type, self.xml_data.description
+                )
             )
 
         # lookup if build type matches primary type
@@ -1885,7 +1959,7 @@ class XMLState(object):
         if image_type_sections:
             return image_type_sections[0]
         raise KiwiTypeNotFound(
-            'No build type defined. At least one type section is mandatory'
+            'No build type defined in {0}'.format(self.xml_data.description)
         )
 
     def _profiled(self, xml_abstract):

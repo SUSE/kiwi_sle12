@@ -32,8 +32,8 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
-    'sphinxcontrib.spelling',
-    'sphinx.ext.autodoc'
+    'sphinx.ext.autodoc',
+    'sphinx.ext.intersphinx',
 ]
 
 docopt_ignore = [
@@ -52,20 +52,40 @@ def remove_module_docstring(app, what, name, obj, options, lines):
     if what == "module" and name in docopt_ignore:
         del lines[:]
 
+def prologReplace(app, docname, source):
+    result = source[0]
+    for key in app.config.prolog_replacements:
+        result = result.replace(key, app.config.prolog_replacements[key])
+    source[0] = result
+
 def setup(app):
+    app.add_config_value('prolog_replacements', {}, True)
+    app.connect('source-read', prologReplace)
     app.connect("autodoc-process-docstring", remove_module_docstring)
     app.add_stylesheet('css/custom.css')
 
 
+prolog_replacements = {
+    '{exc_image_base_name}': 'LimeJeOS-Leap-15.1',
+    '{exc_description}': 'suse-leap-15.1-JeOS',
+    '{exc_netboot}': 'netboot/suse-leap15.1',
+    '{exc_os_version}': '15.1',
+    '{exc_image_version}': '1.15.1',
+    '{exc_repo}': 'obs://openSUSE:Leap:15.1/standard',
+    '{exc_kiwi_repo}':
+        'obs://Virtualization:Appliances:Builder/openSUSE_Leap_15.1',
+    '{schema_version}': '7.1'
+}
+
 latex_documents = [
-    ('index', 'kiwi.tex', u'KIWI Documentation', u'Marcus Schäfer', 'manual')
+    ('index', 'kiwi.tex', 'KIWI Documentation', 'Marcus Schäfer', 'manual')
 ]
 latex_elements = {
     'papersize': 'a4paper',
     'pointsize':'12pt',
     'classoptions': ',openany',
     'babel': '\\usepackage[english]{babel}',
-    'preamble': ur'''
+    'preamble': r'''
       \makeatletter
       \fancypagestyle{normal}{
         \fancyhf{}
@@ -79,14 +99,6 @@ latex_elements = {
       \makeatother
     '''
 }
-
-spelling_lang = 'en_US'
-spelling_show_suggestions = True
-spelling_ignore_acronyms = True
-spelling_ignore_importable_modules = True
-spelling_ignore_python_builtins = True
-spelling_ignore_pypi_package_names = True
-spelling_word_list_filename = '.wordlists/spelling_wordlist.txt'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['.templates']
@@ -105,9 +117,9 @@ master_doc = 'index'
 default_role="py:obj"
 
 # General information about the project.
-project = u'kiwi'
-copyright = u'2016, Marcus Schäfer'
-author = u'Marcus Schäfer'
+project = 'kiwi'
+copyright = '2019, Marcus Schäfer'
+author = 'Marcus Schäfer'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -204,67 +216,69 @@ image_info_doc = 'commands/image_info'
 man_pages = [
     (
         kiwi_doc,
-        'kiwi', u'Creating Operating System Images',
+        'kiwi', 'Creating Operating System Images',
         [author],
         8
     ),
     (
         result_list_doc,
         'kiwi::result::list',
-        u'List build results',
+        'List build results',
         [author],
         8
     ),
     (
         result_bundle_doc,
         'kiwi::result::bundle',
-        u'Bundle build results',
+        'Bundle build results',
         [author],
         8
     ),
     (
         system_prepare_doc,
         'kiwi::system::prepare',
-        u'Prepare image root system',
+        'Prepare image root system',
         [author],
         8
     ),
     (
         system_create_doc,
         'kiwi::system::create',
-        u'Create image from prepared root system',
+        'Create image from prepared root system',
         [author],
         8
     ),
     (
         system_update_doc,
         'kiwi::system::update',
-        u'Update/Upgrade image root system',
+        'Update/Upgrade image root system',
         [author],
         8
     ),
     (
         system_build_doc,
         'kiwi::system::build',
-        u'Build image in combined prepare and create step',
+        'Build image in combined prepare and create step',
         [author],
         8
     ),
     (
         image_resize_doc,
         'kiwi::image::resize',
-        u'Resize disk images to new geometry',
+        'Resize disk images to new geometry',
         [author],
         8
     ),
     (
         image_info_doc,
         'kiwi::image::info',
-        u'Provide detailed information about an image description',
+        'Provide detailed information about an image description',
         [author],
         8
     )
 ]
+
+intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
 
 # If true, show URL addresses after external links.
 #man_show_urls = False

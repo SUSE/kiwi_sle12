@@ -37,6 +37,9 @@ class TestPackageManagerBase(object):
     def test_process_install_requests_bootstrap(self):
         self.manager.process_install_requests_bootstrap()
 
+    def test_post_process_install_requests_bootstrap(self):
+        self.manager.post_process_install_requests_bootstrap()
+
     @raises(NotImplementedError)
     def test_process_install_requests(self):
         self.manager.process_install_requests()
@@ -65,13 +68,15 @@ class TestPackageManagerBase(object):
     def test_match_package_deleted(self):
         self.manager.match_package_deleted('package_name', 'log')
 
-    @raises(NotImplementedError)
     def test_database_consistent(self):
         self.manager.database_consistent()
 
-    @raises(NotImplementedError)
     def test_dump_reload_package_database(self):
         self.manager.dump_reload_package_database()
+
+    def test_has_failed(self):
+        assert self.manager.has_failed(0) is False
+        assert self.manager.has_failed(1) is True
 
     def test_cleanup_requests(self):
         self.manager.cleanup_requests()

@@ -19,6 +19,7 @@ tox
 # python unit testing framework
 pytest
 pytest-cov
+pytest-xdist
 
 # Rolling backport of unittest.mock for all Pythons
 mock
@@ -46,3 +47,6 @@ pyenchant
 # for travis deployment tasks
 travis-sphinx
 ghp-import
+
+# for helper tools
+python-dateutil

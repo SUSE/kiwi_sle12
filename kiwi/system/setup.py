@@ -23,6 +23,7 @@ from collections import namedtuple
 from tempfile import NamedTemporaryFile
 
 # project
+from kiwi.mount_manager import MountManager
 from kiwi.system.uri import Uri
 from kiwi.repository import Repository
 from kiwi.system.root_bind import RootBind
@@ -38,6 +39,7 @@ from kiwi.path import Path
 from kiwi.archive.tar import ArchiveTar
 from kiwi.utils.compress import Compress
 from kiwi.utils.command_capabilities import CommandCapabilities
+from kiwi.utils.rpm_database import RpmDataBase
 
 from kiwi.exceptions import (
     KiwiImportDescriptionError,
@@ -169,7 +171,7 @@ class SystemSetup(object):
         :param str target_dir: directory to unpack archive to
         """
         glob_match = self.description_dir + '/config-cdroot.tar*'
-        for cdroot_archive in glob.iglob(glob_match):
+        for cdroot_archive in sorted(glob.iglob(glob_match)):
             log.info(
                 'Extracting ISO user config archive: {0} to: {1}'.format(
                     cdroot_archive, target_dir
@@ -322,17 +324,12 @@ class SystemSetup(object):
                     'chroot', self.root_dir, 'systemd-firstboot',
                     '--locale=' + locale
                 ])
-            elif os.path.exists(self.root_dir + '/etc/sysconfig/language'):
+            if os.path.exists(self.root_dir + '/etc/sysconfig/language'):
                 Shell.run_common_function(
                     'baseUpdateSysConfig', [
                         self.root_dir + '/etc/sysconfig/language',
                         'RC_LANG', locale
                     ]
-                )
-            else:
-                log.warning(
-                    'locale setup skipped no capable '
-                    'systemd-firstboot or etc/sysconfig/language not found'
                 )
 
     def setup_timezone(self):
@@ -612,14 +609,20 @@ class SystemSetup(object):
         """
         Create etc/fstab from given list of entries
 
-        Also lookup for an optional fstab.append file which allows
+        Also look for an optional fstab.append file which allows
         to append custom fstab entries to the final fstab. Once
         embedded the fstab.append file will be deleted
+
+        Also look for an optional fstab.patch file which allows
+        to patch the current contents of the fstab file with
+        a given patch file. Once patched the fstab.patch file will
+        be deleted
 
         :param list entries: list of line entries for fstab
         """
         fstab_file = self.root_dir + '/etc/fstab'
         fstab_append_file = self.root_dir + '/etc/fstab.append'
+        fstab_patch_file = self.root_dir + '/etc/fstab.patch'
 
         with open(fstab_file, 'w') as fstab:
             for entry in entries:
@@ -628,6 +631,12 @@ class SystemSetup(object):
                 with open(fstab_append_file, 'r') as append:
                     fstab.write(append.read())
                 Path.wipe(fstab_append_file)
+
+        if os.path.exists(fstab_patch_file):
+            Command.run(
+                ['patch', fstab_file, fstab_patch_file]
+            )
+            Path.wipe(fstab_patch_file)
 
     def create_init_link_from_linuxrc(self):
         """
@@ -743,7 +752,7 @@ class SystemSetup(object):
 
     def _import_cdroot_archive(self):
         glob_match = self.description_dir + '/config-cdroot.tar*'
-        for cdroot_archive in glob.iglob(glob_match):
+        for cdroot_archive in sorted(glob.iglob(glob_match)):
             log.info(
                 '--> Importing {0} archive as /image/{0}'.format(
                     cdroot_archive
@@ -865,10 +874,13 @@ class SystemSetup(object):
             )
 
     def _call_script(self, name):
-        if os.path.exists(self.root_dir + '/image/' + name):
-            config_script = Command.call(
-                ['chroot', self.root_dir, 'bash', '/image/' + name]
-            )
+        script_path = os.path.join(self.root_dir, 'image', name)
+        if os.path.exists(script_path):
+            command = ['chroot', self.root_dir]
+            if not Path.access(script_path, os.X_OK):
+                command += ['bash']
+            command += ['/image/' + name]
+            config_script = Command.call(command)
             process = CommandProcess(
                 command=config_script, log_topic='Calling ' + name + ' script'
             )
@@ -944,24 +956,24 @@ class SystemSetup(object):
 
     def _export_rpm_package_list(self, filename):
         log.info('Export rpm packages metadata')
-        dbpath = self._get_rpm_database_location()
-        if dbpath:
-            dbpath_option = ['--dbpath', dbpath]
-        else:
-            dbpath_option = []
+        dbpath_option = [
+            '--dbpath', self._get_rpm_database_location()
+        ]
         query_call = Command.run(
             [
                 'rpm', '--root', self.root_dir, '-qa', '--qf',
                 '|'.join(
                     [
                         '%{NAME}', '%{EPOCH}', '%{VERSION}',
-                        '%{RELEASE}', '%{ARCH}', '%{DISTURL}'
+                        '%{RELEASE}', '%{ARCH}', '%{DISTURL}', '%{LICENSE}'
                     ]
                 ) + '\\n'
             ] + dbpath_option
         )
         with open(filename, 'w') as packages:
-            packages.write(os.linesep.join(sorted(query_call.output.splitlines())))
+            packages.write(
+                os.linesep.join(sorted(query_call.output.splitlines()))
+            )
             packages.write(os.linesep)
 
     def _export_deb_package_list(self, filename):
@@ -973,22 +985,22 @@ class SystemSetup(object):
                 '|'.join(
                     [
                         '${Package}', 'None', '${Version}',
-                        'None', '${Architecture}', 'None'
+                        'None', '${Architecture}', 'None', 'None'
                     ]
                 ) + '\\n'
             ]
         )
         with open(filename, 'w') as packages:
-            packages.write(os.linesep.join(sorted(query_call.output.splitlines())))
+            packages.write(
+                os.linesep.join(sorted(query_call.output.splitlines()))
+            )
             packages.write(os.linesep)
 
     def _export_rpm_package_verification(self, filename):
         log.info('Export rpm verification metadata')
-        dbpath = self._get_rpm_database_location()
-        if dbpath:
-            dbpath_option = ['--dbpath', dbpath]
-        else:
-            dbpath_option = []
+        dbpath_option = [
+            '--dbpath', self._get_rpm_database_location()
+        ]
         query_call = Command.run(
             command=['rpm', '--root', self.root_dir, '-Va'] + dbpath_option,
             raise_on_error=False
@@ -1009,9 +1021,16 @@ class SystemSetup(object):
             verified.write(query_call.output)
 
     def _get_rpm_database_location(self):
-        try:
-            return Command.run(
-                ['chroot', self.root_dir, 'rpm', '-E', '%_dbpath']
-            ).output.rstrip('\r\n')
-        except Exception:
-            return None
+        shared_mount = MountManager(
+            device='/dev', mountpoint=self.root_dir + '/dev'
+        )
+        if not shared_mount.is_mounted():
+            shared_mount.bind_mount()
+        rpmdb = RpmDataBase(self.root_dir)
+        if rpmdb.has_rpm():
+            dbpath = rpmdb.rpmdb_image.expand_query('%_dbpath')
+        else:
+            dbpath = rpmdb.rpmdb_host.expand_query('%_dbpath')
+        if shared_mount.is_mounted():
+            shared_mount.umount_lazy()
+        return dbpath

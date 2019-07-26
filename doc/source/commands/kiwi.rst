@@ -1,10 +1,12 @@
+.. _commands-kiwi:
+
 kiwi
 ====
 
 SYNOPSIS
 --------
 
-.. code-block:: bash
+.. code:: bash
 
    kiwi [global options] service <command> [<args>]
 
@@ -112,43 +114,16 @@ GLOBAL OPTIONS
 EXAMPLE
 -------
 
-.. code-block:: bash
+.. code:: bash
 
    $ git clone https://github.com/SUSE/kiwi-descriptions
 
    $ kiwi --type vmx system build \
-       --description kiwi-descriptions/suse/x86_64/suse-leap-42.3-JeOS \
+       --description kiwi-descriptions/suse/x86_64/{exc_description} \
        --target-dir /tmp/myimage
 
-RUNTIME CONFIG FILE
--------------------
+.. include:: ../working_with_kiwi/runtime_configuration_incl.rst
 
-To control custom paramters of the tool chain used by KIWI a user
-specific configuration file can be provided as:
-
-:file:`~/.config/kiwi/config.yml`
-
-The contents of the file is in YAML format and supports the following
-setup parameters:
-
-.. code-block:: yaml
-
-   xz:
-     - options: -a -b -c
-
-       # Specifies XZ-compression-options
-       # For details see man xz
-
-   obs:
-     - download_url: url
-
-       # Specifies download server url of an open buildservice instance
-       # defaults to: http://download.opensuse.org/repositories
-
-     - public: true|false
-
-       # Specifies if the buildservice instance is public or private
-       # defaults to: true
 
 COMPATIBILITY
 -------------
@@ -157,8 +132,8 @@ This version of KIWI uses a different caller syntax compared to
 former versions. However there is a compatibility mode which allows
 to use a legacy KIWI commandline as follows:
 
-.. code-block:: bash
+.. code:: bash
 
    $ kiwi compat \
-       --build kiwi-descriptions/suse/x86_64/suse-leap-42.3-JeOS \
+       --build kiwi-descriptions/suse/x86_64/{exc_description} \
        --type vmx -d /tmp/myimage

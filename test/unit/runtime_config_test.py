@@ -15,7 +15,7 @@ class TestRuntimeConfig(object):
             self.runtime_config = RuntimeConfig()
 
     @patch('os.path.exists')
-    @patch('yaml.load')
+    @patch('yaml.safe_load')
     def test_reading_system_wide_config_file(self, mock_yaml, mock_exists):
         exists_call_results = [True, False]
 
@@ -92,7 +92,7 @@ class TestRuntimeConfig(object):
     def test_get_iso_tool_category_default(self):
         with patch.dict('os.environ', {'HOME': './'}):
             runtime_config = RuntimeConfig()
-            assert runtime_config.get_iso_tool_category() == 'cdrtools'
+            assert runtime_config.get_iso_tool_category() == 'xorriso'
 
     @patch.object(RuntimeConfig, '_get_attribute')
     @patch('kiwi.logger.log.warning')
@@ -100,7 +100,7 @@ class TestRuntimeConfig(object):
         self, mock_warning, mock_get_attribute
     ):
         mock_get_attribute.return_value = 'foo'
-        assert self.runtime_config.get_iso_tool_category() == 'cdrtools'
+        assert self.runtime_config.get_iso_tool_category() == 'xorriso'
         mock_warning.assert_called_once_with(
             'Skipping invalid iso tool category: foo'
         )
@@ -112,3 +112,9 @@ class TestRuntimeConfig(object):
         with patch.dict('os.environ', {'HOME': './'}):
             runtime_config = RuntimeConfig()
             assert runtime_config.get_oci_archive_tool() == 'umoci'
+
+    def test_get_disabled_runtime_checks(self):
+        assert self.runtime_config.get_disabled_runtime_checks() == [
+            'check_dracut_module_for_oem_install_in_package_list',
+            'check_container_tool_chain_installed'
+        ]

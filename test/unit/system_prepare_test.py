@@ -182,8 +182,10 @@ class TestSystemPrepare(object):
         )
 
         mock_repo.assert_called_once_with(
-            self.system.root_bind, 'package-manager-name',
-            ['check_signatures', 'exclude_docs']
+            self.system.root_bind, 'package-manager-name', [
+                'check_signatures', 'exclude_docs',
+                '_install_langs%POSIX:C:C.UTF-8:en_US:de_DE'
+            ]
         )
         # mock local repos will be translated and bind mounted
         assert uri.translate.call_args_list == [
@@ -197,7 +199,7 @@ class TestSystemPrepare(object):
         ]
         assert repo.add_repo.call_args_list == [
             call(
-                'uri-alias', 'uri', 'yast2', 42,
+                'uri-alias', 'uri', None, 42,
                 None, None, None, None, 'credentials-file', None, None
             ),
             call(
@@ -209,6 +211,7 @@ class TestSystemPrepare(object):
             call('uri-alias'),
             call('uri-alias')
         ]
+        repo.setup_package_database_configuration.assert_called_once_with()
         repo.import_trusted_keys.assert_called_once_with(
             ['key-file-a.asc', 'key-file-b.asc']
         )
@@ -272,6 +275,7 @@ class TestSystemPrepare(object):
         )
         mock_tar.assert_called_once_with('../data/bootstrap.tgz')
         tar.extract.assert_called_once_with('root_dir')
+        self.manager.post_process_install_requests_bootstrap.assert_called_once_with()
 
     @patch('kiwi.logger.log.warning')
     @patch('kiwi.xml_state.XMLState.get_bootstrap_packages_sections')
@@ -370,7 +374,16 @@ class TestSystemPrepare(object):
         self.system.__del__()
         self.system.root_bind.cleanup.assert_called_once_with()
 
-    def test_destructor_raising(self):
+    @patch('kiwi.logger.log.info')
+    def test_destructor_raising(self, mock_log):
         self.system.root_bind = mock.Mock()
-        self.system.root_bind.cleanup.side_effect = Exception
+        self.system.root_bind.cleanup.side_effect = ValueError("nothing")
         del self.system
+
+        assert mock_log.call_args_list[0] == call(
+            'Cleaning up SystemPrepare instance'
+        )
+        assert mock_log.call_args_list[1] == call(
+            'Cleaning up SystemPrepare instance failed, got an exception of'
+            ' type ValueError: nothing'
+        )

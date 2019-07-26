@@ -39,12 +39,18 @@ class TestSystemBuildTask(object):
         )
 
         self.runtime_config = mock.Mock()
+        self.runtime_config.get_disabled_runtime_checks.return_value = []
         kiwi.tasks.base.RuntimeConfig = mock.Mock(
             return_value=self.runtime_config
         )
 
         kiwi.tasks.system_build.SystemPrepare = mock.Mock(
             return_value=self.system_prepare
+        )
+
+        self.rpm = mock.Mock()
+        kiwi.tasks.system_build.Rpm = mock.Mock(
+            return_value=self.rpm
         )
 
         self.setup = mock.Mock()
@@ -96,21 +102,49 @@ class TestSystemBuildTask(object):
         self._init_command_args()
         self.task.command_args['build'] = True
         self.task.process()
-        self.runtime_checker.check_boot_description_exists.assert_called_once_with()
-        self.runtime_checker.check_consistent_kernel_in_boot_and_system_image.assert_called_once_with()
-        self.runtime_checker.check_docker_tool_chain_installed.assert_called_once_with()
-        self.runtime_checker.check_volume_setup_has_no_root_definition.assert_called_once_with()
-        self.runtime_checker.check_volume_label_used_with_lvm.assert_called_once_with()
-        self.runtime_checker.check_xen_uniquely_setup_as_server_or_guest.assert_called_once_with()
-        self.runtime_checker.check_target_directory_not_in_shared_cache.assert_called_once_with(self.abs_target_dir)
-        self.runtime_checker.check_mediacheck_only_for_x86_arch.assert_called_once_with()
-        self.runtime_checker.check_dracut_module_for_live_iso_in_package_list.assert_called_once_with()
-        self.runtime_checker.check_repositories_configured.assert_called_once_with()
-        self.runtime_checker.check_dracut_module_for_disk_overlay_in_package_list.assert_called_once_with()
-        self.runtime_checker.check_dracut_module_for_disk_oem_in_package_list.assert_called_once_with()
-        self.runtime_checker.check_dracut_module_for_oem_install_in_package_list.assert_called_once_with()
-        self.runtime_checker.check_efi_mode_for_disk_overlay_correctly_setup.assert_called_once_with()
-        self.system_prepare.setup_repositories.assert_called_once_with(False, None)
+        self.runtime_checker.\
+            check_boot_description_exists.assert_called_once_with()
+        self.runtime_checker.\
+            check_consistent_kernel_in_boot_and_system_image.\
+            assert_called_once_with()
+        self.runtime_checker.\
+            check_container_tool_chain_installed.assert_called_once_with()
+        self.runtime_checker.\
+            check_volume_setup_defines_multiple_fullsize_volumes.\
+            assert_called_once_with()
+        self.runtime_checker.\
+            check_volume_setup_has_no_root_definition.\
+            assert_called_once_with()
+        self.runtime_checker.\
+            check_volume_label_used_with_lvm.assert_called_once_with()
+        self.runtime_checker.\
+            check_xen_uniquely_setup_as_server_or_guest.\
+            assert_called_once_with()
+        self.runtime_checker.\
+            check_target_directory_not_in_shared_cache.\
+            assert_called_once_with(self.abs_target_dir)
+        self.runtime_checker.\
+            check_mediacheck_installed.assert_called_once_with()
+        self.runtime_checker.\
+            check_dracut_module_for_live_iso_in_package_list.\
+            assert_called_once_with()
+        self.runtime_checker.\
+            check_repositories_configured.assert_called_once_with()
+        self.runtime_checker.\
+            check_dracut_module_for_disk_overlay_in_package_list.\
+            assert_called_once_with()
+        self.runtime_checker.\
+            check_dracut_module_for_disk_oem_in_package_list.\
+            assert_called_once_with()
+        self.runtime_checker.\
+            check_dracut_module_for_oem_install_in_package_list.\
+            assert_called_once_with()
+        self.runtime_checker.\
+            check_efi_mode_for_disk_overlay_correctly_setup.\
+            assert_called_once_with()
+        self.system_prepare.setup_repositories.assert_called_once_with(
+            False, None
+        )
         self.system_prepare.install_bootstrap.assert_called_once_with(
             self.manager
         )
@@ -122,7 +156,8 @@ class TestSystemBuildTask(object):
         )
         self.setup.import_description.assert_called_once_with()
         self.setup.import_overlay_files.assert_called_once_with()
-        self.setup.import_repositories_marked_as_imageinclude.assert_called_once_with()
+        self.setup.import_repositories_marked_as_imageinclude.\
+            assert_called_once_with()
         self.setup.call_config_script.assert_called_once_with()
         self.setup.import_image_identifier.assert_called_once_with()
         self.setup.setup_groups.assert_called_once_with()
@@ -135,6 +170,7 @@ class TestSystemBuildTask(object):
         self.system_prepare.pinch_system.assert_has_calls(
             [call(force=False), call(force=True)]
         )
+        self.rpm.wipe_config.assert_called_once_with()
         self.setup.call_image_script.assert_called_once_with()
         self.builder.create.assert_called_once_with()
         self.result.print_results.assert_called_once_with()
@@ -147,7 +183,9 @@ class TestSystemBuildTask(object):
         self._init_command_args()
         self.task.command_args['--add-package'] = ['vim']
         self.task.process()
-        self.system_prepare.setup_repositories.assert_called_once_with(False, None)
+        self.system_prepare.setup_repositories.assert_called_once_with(
+            False, None
+        )
         self.system_prepare.install_packages.assert_called_once_with(
             self.manager, ['vim']
         )
@@ -157,7 +195,9 @@ class TestSystemBuildTask(object):
         self._init_command_args()
         self.task.command_args['--delete-package'] = ['vim']
         self.task.process()
-        self.system_prepare.setup_repositories.assert_called_once_with(False, None)
+        self.system_prepare.setup_repositories.assert_called_once_with(
+            False, None
+        )
         self.system_prepare.delete_packages.assert_called_once_with(
             self.manager, ['vim']
         )

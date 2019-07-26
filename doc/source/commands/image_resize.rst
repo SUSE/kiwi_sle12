@@ -1,10 +1,12 @@
+.. _kiwi_image_resize:
+
 kiwi image resize
 =================
 
 SYNOPSIS
 --------
 
-.. code-block:: bash
+.. code:: bash
 
    kiwi [global options] service <command> [<args>]
 

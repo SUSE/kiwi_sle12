@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 
+<<<<<<< HEAD
 <image schemaversion="6.9" name="VMX-openSUSE-Tumbleweed">
+=======
+<image schemaversion="7.1" name="VMX-openSUSE-Tumbleweed">
+>>>>>>> cbba32e82e9e51a5ea655ba065334c75b6daf7d2
     <description type="system">
         <author>Marcus Schäfer</author>
         <contact>ms@suse.com</contact>
@@ -14,7 +18,11 @@
         <timezone>Europe/Berlin</timezone>
         <rpm-excludedocs>true</rpm-excludedocs>
         <rpm-check-signatures>false</rpm-check-signatures>
+<<<<<<< HEAD
         <bootsplash-theme>openSUSE</bootsplash-theme>
+=======
+        <bootsplash-theme>bgrt</bootsplash-theme>
+>>>>>>> cbba32e82e9e51a5ea655ba065334c75b6daf7d2
         <bootloader-theme>openSUSE</bootloader-theme>
         <type image="vmx" filesystem="ext3" bootloader="grub2" kernelcmdline="console=ttyS0 splash" firmware="uefi" format="vmdk">
             <systemdisk>
@@ -35,7 +43,11 @@
         <package name="patterns-base-minimal_base"/>
         <package name="bind-utils"/>
         <package name="systemd"/>
+<<<<<<< HEAD
         <package name="plymouth-branding-openSUSE"/>
+=======
+        <package name="plymouth-theme-bgrt"/>
+>>>>>>> cbba32e82e9e51a5ea655ba065334c75b6daf7d2
         <package name="grub2-branding-openSUSE"/>
         <package name="ifplugd"/>
         <package name="iputils"/>

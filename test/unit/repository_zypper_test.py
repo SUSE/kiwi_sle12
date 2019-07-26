@@ -1,16 +1,13 @@
+from pytest import raises
 from mock import patch
 from mock import call
 
 import mock
 import os
 
-from .test_helper import raises, patch_open
-
-from kiwi.exceptions import (
-    KiwiRepoTypeUnknown
-)
-
+from .test_helper import patch_open
 from kiwi.repository.zypper import RepositoryZypper
+from kiwi.exceptions import KiwiCommandError
 
 
 class TestRepositoryZypper(object):
@@ -35,7 +32,9 @@ class TestRepositoryZypper(object):
         )
         self.root_bind.root_dir = '../data'
         self.root_bind.shared_location = '/shared-dir'
-        self.repo = RepositoryZypper(self.root_bind, ['exclude_docs'])
+        self.repo = RepositoryZypper(
+            self.root_bind, ['exclude_docs', '_install_langs%en_US:de_DE']
+        )
 
     @patch('kiwi.command.Command.run')
     @patch('kiwi.repository.zypper.NamedTemporaryFile')
@@ -66,12 +65,6 @@ class TestRepositoryZypper(object):
             call('main', 'gpgcheck', '1'),
         ]
 
-    @raises(KiwiRepoTypeUnknown)
-    @patch('kiwi.command.Command.run')
-    @patch('kiwi.repository.zypper.Uri')
-    def test_add_repo_raises(self, mock_uri, mock_command):
-        self.repo.add_repo('foo', 'uri', 'xxx')
-
     def test_use_default_location(self):
         self.repo.use_default_location()
         assert self.repo.zypper_args == [
@@ -88,6 +81,22 @@ class TestRepositoryZypper(object):
             self.repo.zypper_args
         assert self.repo.runtime_config()['command_env'] == \
             self.repo.command_env
+
+    @patch.object(RepositoryZypper, '_backup_package_cache')
+    @patch.object(RepositoryZypper, '_restore_package_cache')
+    @patch('kiwi.command.Command.run')
+    @patch('kiwi.repository.zypper.Path')
+    @patch('kiwi.repository.zypper.Uri')
+    @patch('os.path.exists')
+    @patch_open
+    def test_add_repo_second_attempt_on_failure(
+        self, mock_open, mock_exists, mock_uri, mock_path, mock_command,
+        mock_restore_package_cache, mock_backup_package_cache
+    ):
+        mock_command.side_effect = KiwiCommandError('error')
+        with raises(KiwiCommandError):
+            self.repo.add_repo('foo', 'http://foo/uri', 'rpm-md', 42)
+        assert mock_command.call_count == 2
 
     @patch('kiwi.repository.zypper.ConfigParser')
     @patch('kiwi.command.Command.run')
@@ -118,9 +127,8 @@ class TestRepositoryZypper(object):
                 ['zypper'] + self.repo.zypper_args + [
                     '--root', '../data',
                     'addrepo', '--refresh',
-                    '--type', 'YUM',
                     '--keep-packages',
-                    '-C',
+                    '--no-check',
                     'kiwi_iso_mount/uri',
                     'foo'
                 ], self.repo.command_env
@@ -151,9 +159,8 @@ class TestRepositoryZypper(object):
                 ['zypper'] + self.repo.zypper_args + [
                     '--root', '../data',
                     'addrepo', '--refresh',
-                    '--type', 'YUM',
                     '--no-keep-packages',
-                    '-C',
+                    '--no-check',
                     'http://foo/uri',
                     'foo'
                 ], self.repo.command_env
@@ -193,9 +200,8 @@ class TestRepositoryZypper(object):
                 ['zypper'] + self.repo.zypper_args + [
                     '--root', '../data',
                     'addrepo', '--refresh',
-                    '--type', 'YUM',
                     '--keep-packages',
-                    '-C',
+                    '--no-check',
                     'kiwi_iso_mount/uri',
                     'foo'
                 ], self.repo.command_env
@@ -217,18 +223,71 @@ class TestRepositoryZypper(object):
             '../data/shared-dir/zypper/repos/foo.repo', 'w'
         )
 
+    @patch('kiwi.repository.zypper.RpmDataBase')
     @patch('kiwi.command.Command.run')
-    def test_import_trusted_keys(self, mock_run):
-        self.repo.import_trusted_keys(['key-file-a.asc', 'key-file-b.asc'])
-        assert mock_run.call_args_list == [
-            call([
-                'rpm', '--root', '../data', '--import',
-                'key-file-a.asc', '--dbpath', '/var/lib/rpm'
-            ]),
-            call([
-                'rpm', '--root', '../data', '--import',
-                'key-file-b.asc', '--dbpath', '/var/lib/rpm'
-            ])
+    @patch('kiwi.repository.zypper.Path.create')
+    def test_setup_package_database_configuration(
+        self, mock_Path_create, mock_Command_run, mock_RpmDataBase
+    ):
+        rpmdb = mock.Mock()
+        rpmdb.has_rpm.return_value = False
+        rpmdb.rpmdb_host.expand_query.return_value = '/usr/lib/sysimage/rpm'
+        mock_RpmDataBase.return_value = rpmdb
+        self.repo.setup_package_database_configuration()
+        assert mock_RpmDataBase.call_args_list == [
+            call('../data', 'macros.kiwi-image-config'),
+            call('../data')
+        ]
+        rpmdb.set_macro_from_string.assert_called_once_with(
+            '_install_langs%en_US:de_DE'
+        )
+        rpmdb.write_config.assert_called_once_with()
+        rpmdb.set_database_to_host_path.assert_called_once_with()
+        rpmdb.init_database.assert_called_once_with()
+        mock_Path_create.assert_called_once_with('../data/var/lib')
+        mock_Command_run.assert_called_once_with(
+            [
+                'ln', '-s', '../../usr/lib/sysimage/rpm', '../data/var/lib/rpm'
+            ], raise_on_error=False
+        )
+
+    @patch('kiwi.repository.zypper.RpmDataBase')
+    @patch('kiwi.command.Command.run')
+    @patch('kiwi.repository.zypper.Path.create')
+    def test_setup_package_database_configuration_bootstrapped_system(
+        self, mock_Path_create, mock_Command_run, mock_RpmDataBase
+    ):
+        rpmdb = mock.Mock()
+        rpmdb.has_rpm.return_value = True
+        rpmdb.rpmdb_host.expand_query.return_value = '/usr/lib/sysimage/rpm'
+        mock_RpmDataBase.return_value = rpmdb
+        self.repo.setup_package_database_configuration()
+        assert mock_RpmDataBase.call_args_list == [
+            call('../data', 'macros.kiwi-image-config'),
+            call('../data')
+        ]
+        rpmdb.set_macro_from_string.assert_called_once_with(
+            '_install_langs%en_US:de_DE'
+        )
+        rpmdb.write_config.assert_called_once_with()
+        rpmdb.link_database_to_host_path.assert_called_once_with()
+        rpmdb.init_database.assert_called_once_with()
+        mock_Path_create.assert_called_once_with('../data/var/lib')
+        mock_Command_run.assert_called_once_with(
+            [
+                'ln', '-s', '../../usr/lib/sysimage/rpm', '../data/var/lib/rpm'
+            ], raise_on_error=False
+        )
+
+    @patch('kiwi.repository.zypper.RpmDataBase')
+    def test_import_trusted_keys(self, mock_RpmDataBase):
+        rpmdb = mock.Mock()
+        mock_RpmDataBase.return_value = rpmdb
+        signing_keys = ['key-file-a.asc', 'key-file-b.asc']
+        self.repo.import_trusted_keys(signing_keys)
+        assert rpmdb.import_signing_key_to_image.call_args_list == [
+            call('key-file-a.asc'),
+            call('key-file-b.asc')
         ]
 
     @patch('kiwi.command.Command.run')
@@ -265,9 +324,8 @@ class TestRepositoryZypper(object):
             ['zypper'] + self.repo.zypper_args + [
                 '--root', '../data',
                 'addrepo', '--refresh',
-                '--type', 'YUM',
                 '--keep-packages',
-                '-C',
+                '--no-check',
                 'http://some/repo?credentials=credentials_file',
                 'foo'
             ], self.repo.command_env

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<image schemaversion="6.9" name="LimeJeOS-openSUSE-13.2" displayname="Bob">
+<image schemaversion="7.1" name="LimeJeOS-openSUSE-13.2" displayname="Bob">
     <drivers>
         <file name="crypto/*"/>
         <file name="drivers/acpi/*"/>
@@ -85,6 +85,8 @@
             <size unit="G" additive="true">1</size>
             <systemdisk name="mydisk">
                 <volume name="root" size="6G" mountpoint="/" label="foo"/>
+                <volume name="foo" size="all"/>
+                <volume name="bar" freespace="all"/>
             </systemdisk>
             <machine memory="512" xen_loader="pvgrub">
                 <vmdisk id="0" device="/dev/xvda" controller="ide"/>
@@ -101,7 +103,7 @@
     <users>
         <user groups="root" pwdformat="plain" password="mypwd" shell="/bin/bash" id="815" realname="Bob" home="/root" name="root"/>
     </users>
-    <repository type="yast2" priority="42" imageinclude="true">
+    <repository priority="42" imageinclude="true">
         <source path="iso:///image/CDs/dvd.iso"/>
     </repository>
     <repository type="rpm-md">

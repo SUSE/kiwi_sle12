@@ -35,6 +35,13 @@ class TestXMLState(object):
             no_image_packages_description.load()
         )
 
+    def test_get_description_section(self):
+        description = self.state.get_description_section()
+        assert description.author == 'Marcus'
+        assert description.contact == 'ms@suse.com'
+        assert description.specification == \
+            'openSUSE 13.2 JeOS, is a small text based image'
+
     def test_build_type_primary_selected(self):
         assert self.state.get_build_type_name() == 'oem'
 
@@ -156,8 +163,10 @@ class TestXMLState(object):
         assert self.state.xml_data.get_repository()[0].get_type() == 'type'
         assert self.state.xml_data.get_repository()[0].get_alias() == 'alias'
         assert self.state.xml_data.get_repository()[0].get_priority() == 1
-        assert self.state.xml_data.get_repository()[0].get_imageinclude() is True
-        assert self.state.xml_data.get_repository()[0].get_package_gpgcheck() is False
+        assert self.state.xml_data.get_repository()[0] \
+            .get_imageinclude() is True
+        assert self.state.xml_data.get_repository()[0] \
+            .get_package_gpgcheck() is False
 
     def test_add_repository(self):
         self.state.add_repository('repo', 'type', 'alias', 1, True)
@@ -166,7 +175,8 @@ class TestXMLState(object):
         assert self.state.xml_data.get_repository()[3].get_type() == 'type'
         assert self.state.xml_data.get_repository()[3].get_alias() == 'alias'
         assert self.state.xml_data.get_repository()[3].get_priority() == 1
-        assert self.state.xml_data.get_repository()[3].get_imageinclude() is True
+        assert self.state.xml_data.get_repository()[3] \
+            .get_imageinclude() is True
 
     def test_add_repository_with_empty_values(self):
         self.state.add_repository('repo', 'type', '', '', True)
@@ -175,7 +185,8 @@ class TestXMLState(object):
         assert self.state.xml_data.get_repository()[3].get_type() == 'type'
         assert self.state.xml_data.get_repository()[3].get_alias() == ''
         assert self.state.xml_data.get_repository()[3].get_priority() is None
-        assert self.state.xml_data.get_repository()[3].get_imageinclude() is True
+        assert self.state.xml_data.get_repository()[3] \
+            .get_imageinclude() is True
 
     def test_get_to_become_deleted_packages(self):
         assert self.state.get_to_become_deleted_packages() == [
@@ -185,6 +196,15 @@ class TestXMLState(object):
     def test_get_build_type_vagrant_config_section(self):
         vagrant_config = self.state.get_build_type_vagrant_config_section()
         assert vagrant_config.get_provider() == 'libvirt'
+
+    def test_virtualbox_guest_additions_vagrant_config_section(self):
+        assert not self.state.get_vagrant_config_virtualbox_guest_additions()
+
+    def test_virtualbox_guest_additions_vagrant_config_section_missing(self):
+        self.state. \
+            get_build_type_vagrant_config_section() \
+            .virtualbox_guest_additions_present = True
+        assert self.state.get_vagrant_config_virtualbox_guest_additions()
 
     def test_get_build_type_system_disk_section(self):
         assert self.state.get_build_type_system_disk_section().get_name() == \
@@ -374,13 +394,6 @@ class TestXMLState(object):
         state = XMLState(xml_data, None, 'vmx')
         assert state.get_build_type_machine_section().get_guestOS() == 'suse'
 
-    def test_get_build_type_pxedeploy_section(self):
-        description = XMLDescription('../data/example_pxe_config.xml')
-        xml_data = description.load()
-        state = XMLState(xml_data, None, 'pxe')
-        assert state.get_build_type_pxedeploy_section().get_server() == \
-            '192.168.100.2'
-
     def test_get_drivers_list(self):
         assert self.state.get_drivers_list() == \
             ['crypto/*', 'drivers/acpi/*', 'bar']
@@ -396,7 +409,9 @@ class TestXMLState(object):
             'root'
 
     def test_get_users(self):
-        description = XMLDescription('../data/example_multiple_users_config.xml')
+        description = XMLDescription(
+            '../data/example_multiple_users_config.xml'
+        )
         xml_data = description.load()
         state = XMLState(xml_data)
         users = state.get_users()
@@ -406,7 +421,9 @@ class TestXMLState(object):
         assert any(u.get_name() == 'kiwi' for u in users)
 
     def test_get_user_groups(self):
-        description = XMLDescription('../data/example_multiple_users_config.xml')
+        description = XMLDescription(
+            '../data/example_multiple_users_config.xml'
+        )
         xml_data = description.load()
         state = XMLState(xml_data)
 
@@ -736,3 +753,15 @@ class TestXMLState(object):
         assert state.get_initrd_system() is None
         state = XMLState(xml_data, [], 'oem')
         assert state.get_initrd_system() == 'kiwi'
+
+    def test_get_rpm_locale_filtering(self):
+        assert self.state.get_rpm_locale_filtering() is True
+        assert self.boot_state.get_rpm_locale_filtering() is False
+
+    def test_get_locale(self):
+        assert self.state.get_locale() == ['en_US', 'de_DE']
+
+    def test_get_rpm_locale(self):
+        assert self.state.get_rpm_locale() == [
+            'POSIX', 'C', 'C.UTF-8', 'en_US', 'de_DE'
+        ]

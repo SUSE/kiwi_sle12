@@ -99,13 +99,19 @@ class SystemPrepare(object):
         repository_sections = \
             self.xml_state.get_repository_sections_used_for_build()
         package_manager = self.xml_state.get_package_manager()
+        rpm_locale_list = self.xml_state.get_rpm_locale()
         if self.xml_state.get_rpm_check_signatures():
             repository_options.append('check_signatures')
         if self.xml_state.get_rpm_excludedocs():
             repository_options.append('exclude_docs')
+        if rpm_locale_list:
+            repository_options.append(
+                '_install_langs%{0}'.format(':'.join(rpm_locale_list))
+            )
         repo = Repository(
             self.root_bind, package_manager, repository_options
         )
+        repo.setup_package_database_configuration()
         if signing_keys:
             repo.import_trusted_keys(signing_keys)
         for xml_repo in repository_sections:
@@ -201,11 +207,12 @@ class SystemPrepare(object):
                     manager.match_package_installed
                 )
             )
-        except Exception as e:
-            raise KiwiBootStrapPhaseFailed(
-                'Bootstrap package installation failed: %s' % format(e)
-            )
-        manager.dump_reload_package_database()
+        except Exception as issue:
+            if manager.has_failed(process.returncode()):
+                raise KiwiBootStrapPhaseFailed(
+                    'Bootstrap package installation failed: {0}'.format(issue)
+                )
+        manager.post_process_install_requests_bootstrap()
         # process archive installations
         if bootstrap_archives:
             try:
@@ -261,10 +268,11 @@ class SystemPrepare(object):
                         manager.match_package_installed
                     )
                 )
-            except Exception as e:
-                raise KiwiInstallPhaseFailed(
-                    'System package installation failed: %s' % format(e)
-                )
+            except Exception as issue:
+                if manager.has_failed(process.returncode()):
+                    raise KiwiInstallPhaseFailed(
+                        'System package installation failed: {0}'.format(issue)
+                    )
         # process archive installations
         if system_archives:
             try:
@@ -411,7 +419,8 @@ class SystemPrepare(object):
                     [description_dir, archive]
                 )
             archive_exists = os.path.exists(archive_file)
-            if not archive_is_absolute and not archive_exists and derived_description_dir:
+            if not archive_is_absolute \
+               and not archive_exists and derived_description_dir:
                 archive_file = '/'.join(
                     [derived_description_dir, archive]
                 )
@@ -444,8 +453,17 @@ class SystemPrepare(object):
             manager.exclude_requests
 
     def __del__(self):
-        log.info('Cleaning up %s instance', type(self).__name__)
+        log.info('Cleaning up {:s} instance'.format(type(self).__name__))
         try:
-            self.root_bind.cleanup()
-        except Exception:
-            pass
+            if hasattr(self, 'root_bind'):
+                self.root_bind.cleanup()
+        except Exception as exc:
+            log.info(
+                'Cleaning up {self_name:s} instance failed, got an exception '
+                'of type {exc_type:s}: {exc:s}'
+                .format(
+                    self_name=type(self).__name__,
+                    exc_type=type(exc).__name__,
+                    exc=str(exc)
+                )
+            )

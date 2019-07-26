@@ -97,6 +97,7 @@ from kiwi.defaults import Defaults
 from kiwi.privileges import Privileges
 from kiwi.path import Path
 from kiwi.logger import log
+from kiwi.utils.rpm import Rpm
 
 
 class SystemBuildTask(CliTask):
@@ -134,22 +135,15 @@ class SystemBuildTask(CliTask):
         self.load_xml_description(
             self.command_args['--description']
         )
-        self.runtime_checker.check_minimal_required_preferences()
-        self.runtime_checker.check_efi_mode_for_disk_overlay_correctly_setup()
-        self.runtime_checker.check_boot_description_exists()
-        self.runtime_checker.check_consistent_kernel_in_boot_and_system_image()
-        self.runtime_checker.check_docker_tool_chain_installed()
-        self.runtime_checker.check_volume_setup_has_no_root_definition()
-        self.runtime_checker.check_volume_label_used_with_lvm()
-        self.runtime_checker.check_xen_uniquely_setup_as_server_or_guest()
-        self.runtime_checker.check_target_directory_not_in_shared_cache(
-            abs_target_dir_path
+
+        build_checks = self.checks_before_command_args
+        build_checks.update(
+            {
+                'check_target_directory_not_in_shared_cache':
+                    [abs_target_dir_path]
+            }
         )
-        self.runtime_checker.check_mediacheck_only_for_x86_arch()
-        self.runtime_checker.check_dracut_module_for_live_iso_in_package_list()
-        self.runtime_checker.check_dracut_module_for_disk_overlay_in_package_list()
-        self.runtime_checker.check_dracut_module_for_disk_oem_in_package_list()
-        self.runtime_checker.check_dracut_module_for_oem_install_in_package_list()
+        self.run_checks(build_checks)
 
         if self.command_args['--ignore-repos']:
             self.xml_state.delete_repository_sections()
@@ -188,8 +182,7 @@ class SystemBuildTask(CliTask):
                 self.command_args['--set-container-derived-from']
             )
 
-        self.runtime_checker.check_repositories_configured()
-        self.runtime_checker.check_image_include_repos_publicly_resolvable()
+        self.run_checks(self.checks_after_command_args)
 
         log.info('Preparing new root system')
         system = SystemPrepare(
@@ -249,6 +242,11 @@ class SystemBuildTask(CliTask):
         # handle delete package requests, forced uninstall without
         # any dependency resolution
         system.pinch_system(force=True)
+
+        # delete any custom rpm macros created
+        Rpm(
+            image_root, Defaults.get_custom_rpm_image_macro_name()
+        ).wipe_config()
 
         # make sure system instance is cleaned up now
         del system
