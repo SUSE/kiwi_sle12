@@ -123,11 +123,9 @@ build: clean tox
 	tar -uf dist/python-kiwi.tar kiwi-${version}/doc/build/latex/kiwi.pdf
 	gzip dist/python-kiwi.tar
 	rm -rf kiwi-${version}
-	# update rpm changelog using reference file
-	helper/update_changelog.py --since package/python-kiwi.changes > \
-		dist/python-kiwi.changes
-	helper/update_changelog.py --file package/python-kiwi.changes >> \
-		dist/python-kiwi.changes
+	# provide rpm changelog from git changelog
+	git log | helper/changelog_generator |\
+		helper/changelog_descending > dist/python-kiwi.changes
 	# update package version in spec file
 	cat package/python-kiwi-spec-template | sed -e s'@%%VERSION@${version}@' \
 		> dist/python-kiwi.spec
