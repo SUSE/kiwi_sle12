@@ -183,6 +183,7 @@ config = {
     'download_url': 'https://download.opensuse.org/repositories/Virtualization:/Appliances:/Builder',
     'author_email': 'ms@suse.com',
     'version': __version__,
+    'license' : 'GPLv3+',
     'install_requires': [
         'docopt>=0.6.2',
         'lxml',
@@ -211,7 +212,7 @@ config = {
        # classifier: http://pypi.python.org/pypi?%3Aaction=list_classifiers
        'Development Status :: 5 - Production/Stable',
        'Intended Audience :: Developers',
-       'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
+       'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
        'Operating System :: POSIX :: Linux',
        'Programming Language :: Python :: 2.7',
        'Programming Language :: Python :: 3.4',
