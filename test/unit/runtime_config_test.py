@@ -94,13 +94,13 @@ class TestRuntimeConfig:
         assert self.runtime_config.get_iso_tool_category() == 'cdrtools'
 
     def test_get_iso_tool_category_default(self):
-        assert self.default_runtime_config.get_iso_tool_category() == 'xorriso'
+        assert self.default_runtime_config.get_iso_tool_category() == 'cdrtools'
 
     @patch.object(RuntimeConfig, '_get_attribute')
     def test_get_iso_tool_category_invalid(self, mock_get_attribute):
         mock_get_attribute.return_value = 'foo'
         with self._caplog.at_level(logging.WARNING):
-            assert self.runtime_config.get_iso_tool_category() == 'xorriso'
+            assert self.runtime_config.get_iso_tool_category() == 'cdrtools'
             assert 'Skipping invalid iso tool category: foo' in \
                 self._caplog.text
 
