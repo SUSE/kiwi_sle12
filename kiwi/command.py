@@ -17,24 +17,26 @@
 #
 import select
 import os
+import logging
 import subprocess
 from collections import namedtuple
 
-# In python2 bytes is string which is different from
-# the bytes type in python3. The bytes type from the
-# builtins generalizes this type to be bytes always
-from builtins import bytes
-
 # project
-from .utils.codec import Codec
+from kiwi.utils.codec import Codec
 
-from .exceptions import (
+from kiwi.exceptions import (
     KiwiCommandError,
     KiwiCommandNotFound
 )
 
+log = logging.getLogger('kiwi')
 
-class Command(object):
+command_type = namedtuple(
+    'command', ['output', 'error', 'returncode']
+)
+
+
+class Command:
     """
     **Implements command invocation**
 
@@ -73,11 +75,7 @@ class Command(object):
 
         :rtype: namedtuple
         """
-        from .logger import log
         from .path import Path
-        command_type = namedtuple(
-            'command', ['output', 'error', 'returncode']
-        )
         log.debug('EXEC: [%s]', ' '.join(command))
         environment = os.environ
         if custom_env:
@@ -160,7 +158,6 @@ class Command(object):
 
         :rtype: namedtuple
         """
-        from .logger import log
         from .path import Path
         log.debug('EXEC: [%s]', ' '.join(command))
         environment = os.environ

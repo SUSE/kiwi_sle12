@@ -15,27 +15,22 @@
 # You should have received a copy of the GNU General Public License
 # along with kiwi.  If not, see <http://www.gnu.org/licenses/>
 #
+import os
+import logging
 from xml.dom import minidom
 from lxml import (
     etree,
     isoschematron
 )
 from tempfile import NamedTemporaryFile
-import os
-from six import BytesIO
-
-# In python2 bytes is string which is different from
-# the bytes type in python3. The bytes type from the
-# builtins generalizes this type to be bytes always
-from builtins import bytes
+from io import BytesIO
 
 # project
-from .defaults import Defaults
-from . import xml_parse
-from .command import Command
-from .logger import log
+from kiwi.defaults import Defaults
+from kiwi import xml_parse
+from kiwi.command import Command
 
-from .exceptions import (
+from kiwi.exceptions import (
     KiwiSchemaImportError,
     KiwiValidationError,
     KiwiDescriptionInvalid,
@@ -45,8 +40,10 @@ from .exceptions import (
     KiwiCommandNotFound
 )
 
+log = logging.getLogger('kiwi')
 
-class XMLDescription(object):
+
+class XMLDescription:
     """
     **Implements data management for the XML description**
 

@@ -179,7 +179,7 @@ config = {
     'name': 'kiwi',
     'description': 'KIWI - Appliance Builder (next generation)',
     'author': 'Marcus Schaefer',
-    'url': 'http://suse.github.io/kiwi',
+    'url': 'https://osinside.github.io/kiwi',
     'download_url': 'https://download.opensuse.org/repositories/Virtualization:/Appliances:/Builder',
     'author_email': 'ms@suse.com',
     'version': __version__,
@@ -187,9 +187,7 @@ config = {
     'install_requires': [
         'docopt>=0.6.2',
         'lxml',
-        'xattr',
-        'future',
-        'six',
+        'pyxattr',
         'requests',
         'PyYAML'
     ],
@@ -202,8 +200,8 @@ config = {
     },
     'entry_points': {
         'console_scripts': [
-            'kiwi-ng-{0}=kiwi.kiwi:main'.format(python_version),
-            'kiwicompat-{0}=kiwi.kiwi_compat:main'.format(python_version)
+            'kiwi-ng=kiwi.kiwi:main',
+            'kiwicompat=kiwi.kiwi_compat:main'
         ]
     },
     'include_package_data': True,
@@ -214,9 +212,8 @@ config = {
        'Intended Audience :: Developers',
        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
        'Operating System :: POSIX :: Linux',
-       'Programming Language :: Python :: 2.7',
-       'Programming Language :: Python :: 3.4',
-       'Programming Language :: Python :: 3.5',
+       'Programming Language :: Python :: 3.6',
+       'Programming Language :: Python :: 3.7',
        'Topic :: System :: Operating System',
     ]
 }

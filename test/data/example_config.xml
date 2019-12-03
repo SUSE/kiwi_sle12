@@ -40,7 +40,7 @@
         <rpm-locale-filtering>true</rpm-locale-filtering>
     </preferences>
     <preferences>
-        <type bootloader="grub2" image="oem" primary="true" boot="oemboot/example-distribution" firmware="efi" kernelcmdline="splash" vga="0x303" editbootconfig="my_edit_boot_script" editbootinstall="/absolute/path/to/my_edit_boot_install" fsmountoptions="async" btrfs_root_is_snapshot="true" spare_part="200M" xen_server="true" formatoptions="force_size,super=man" filesystem="ext4">
+        <type bootloader="grub2" image="oem" primary="true" boot="oemboot/example-distribution" firmware="efi" kernelcmdline="splash" vga="0x303" editbootconfig="my_edit_boot_script" editbootinstall="/absolute/path/to/my_edit_boot_install" fsmountoptions="async" fscreateoptions="-O ^has_journal" btrfs_root_is_snapshot="true" spare_part="200M" xen_server="true" formatoptions="force_size,super=man" filesystem="ext4">
             <size unit="G" additive="true">1</size>
             <systemdisk name="mydisk"/>
             <machine memory="512" xen_loader="hvmloader">
@@ -51,6 +51,7 @@
             <oemconfig>
                 <oem-systemsize>2048</oem-systemsize>
                 <oem-swap>true</oem-swap>
+                <oem-swapsize>42</oem-swapsize>
                 <oem-recovery>false</oem-recovery>
             </oemconfig>
             <vagrantconfig provider="libvirt" virtualsize="42"/>
@@ -145,9 +146,9 @@
     <users>
         <user pwdformat="plain" password="mypwd" shell="/bin/bash" id="815" realname="Bob" home="/root" name="root"/>
         <user groups="users" pwdformat="plain" password="mypwd" home="/home/tux" name="tux"/>
-        <user groups="kiwi,admin,users" pwdformat="plain" password="mypwd" home="/home/kiwi" name="kiwi"/>
+        <user groups="kiwi,admin,users" pwdformat="plain" password="mypwd" name="kiwi"/>
     </users>
-    <repository priority="42">
+    <repository priority="42" sourcetype="baseurl">
         <source path="iso:///image/CDs/dvd.iso"/>
     </repository>
     <repository type="rpm-md" imageinclude="true">

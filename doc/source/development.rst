@@ -20,12 +20,12 @@ driven development rules.
 
 If you want to implement a bigger feature, consider opening an issue on
 GitHub first to discuss the changes. Or join the discussion in the
-``#kiwi`` channel on `Riot.im <https://riot.im/>`_.
+``#kiwi`` channel on `Riot.im <https://about.riot.im>`_.
 
 Fork the upstream KIWI repository
 ---------------------------------
 
-1. On GitHub, navigate to: https://github.com/SUSE/kiwi
+1. On GitHub, navigate to: https://github.com/OSInside/kiwi
 
 2. In the top-right corner of the page, click :command:`Fork`.
 
@@ -36,7 +36,7 @@ Create a local clone of the forked KIWI repository
 
     $ git clone https://github.com/YOUR-USERNAME/kiwi
 
-    $ git remote add upstream https://github.com/SUSE/kiwi.git
+    $ git remote add upstream https://github.com/OSInside/kiwi.git
 
 Install Required Operating System Packages
 ------------------------------------------
@@ -44,75 +44,61 @@ Install Required Operating System Packages
 KIWI requires the following additional packages which are not provided by
 :command:`pip`:
 
-* XML processing libraries: `libxml2` and `libxslt` (for :mod:`lxml`)
-* Python header files (for :mod:`xattr`), usually provided by a package
-  called `python-devel` or `python3-devel`
-* The `enchant` spell checking library
-* gcc compiler and glibc-devel header files
-* The `ShellCheck <https://github.com/koalaman/shellcheck>`_ script
-  linter.
-* A manipulation program for ISO images, either: ``xorriso`` (preferred) or
-  ``genisoimage``.
+XML processing libraries
+  `libxml2` and `libxslt` (for :mod:`lxml`)
 
-A full LaTeX installation is required to build the PDF documentation
-[#f1]_.
+Python header files, GCC compiler and glibc-devel header files
+  Required for python modules that hooks into shared library context
 
-On SUSE based systems run:
+Spell Checking library
+  Provided by the `enchant` library
 
-.. code:: shell-session
+ShellCheck
+  `ShellCheck <https://github.com/koalaman/shellcheck>`_ script linter.
 
-   $ zypper install --no-recommends \
-         python3-devel libxml2-devel libxslt-devel glibc-devel gcc \
-         trang xorriso \
-         texlive-fncychap texlive-wrapfig texlive-capt-of \
-         texlive-latexmk texlive-cmap texlive-babel-english \
-         texlive-times texlive-titlesec texlive-tabulary texlive-framed \
-         texlive-float texlive-upquote texlive-parskip texlive-needspace \
-         texlive-makeindex-bin texlive-collection-fontsrecommended \
-         texlive-psnfss
+ISO creation program
+  One of ``xorriso`` (preferred) or ``genisoimage``.
 
-On Fedora the following commands should install the required packages:
+LaTeX documentation build environment
+  A full LaTeX installation is required to build the PDF documentation
+  [#f1]_.
+
+The above mentioned system packages will be installed by calling the
+`install_devel_packages.sh` helper script from the checked out Git
+repository as follows:
 
 .. code:: shell-session
 
-   $ dnf install python3 python3-devel 'python3dist(pip)' \
-      'python3dist(tox)' make gcc which xz xorriso libxml2-devel \
-      libxslt-devel enchant genisoimage ShellCheck
-   $ # LaTeX packages
-   $ dnf install latexmk texlive-cmap texlive-metafont texlive-ec \
-      texlive-babel-english texlive-fncychap texlive-fancyhdr \
-      texlive-titlesec texlive-tabulary texlive-framed texlive-wrapfig \
-      texlive-parskip texlive-upquote texlive-capt-of texlive-needspace \
-      texlive-makeindex texlive-times texlive-helvetic texlive-courier \
-      texlive-gsftopk texlive-updmap-map texlive-dvips
+   $ sudo helper/install_devel_packages.sh
 
+.. note::
+
+   The helper script checks for the package managers `zypper` and
+   `dnf` and associates a distribution with it. If you use a
+   distribution that does not use one of those package managers
+   the script will not install any packages and exit with an
+   error message. In this case we recommend to take a look at
+   the package list encoded in the script and adapt to your
+   distribution and package manager as needed.
 
 Create a Python Virtual Development Environment
 -----------------------------------------------
 
-We recommend to setup a Python virtualenv for development. For Python 3
-:command:`python3 -m venv` is used, as it is bundled with Python itself
-(see https://docs.python.org/3/library/venv.html for details). For Python
-2.7, use :command:`virtualenv`, which is provided via :command:`pip` or as
-an extra package by your favorite Linux distribution.
-
-The following commands initializes a development environment for Python 3:
+The following commands initializes and activates a development
+environment for Python 3:
 
 .. code:: shell-session
 
-   $ python3 -m venv .env3
-   $ source .env3/bin/activate
-   $ pip install -r .virtualenv.dev-requirements.txt
-   $ python3 setup.py develop
+   $ tox -e devel
+   $ source .tox/3/bin/activate
 
-The :command:`develop` target of the :command:`setup.py` script
-automatically creates the application entry point called
-:command:`kiwi-ng-3`, which allows you to call the your modified version of
-KIWI from inside the virtual environment:
+The commands above automatically creates the application script
+called :command:`kiwi-ng`, which allows you to run KIWI from the
+Python sources inside the virtual environment:
 
 .. code:: shell-session
 
-    $ kiwi-ng-3 --help
+    $ kiwi-ng --help
 
 .. warning::
 
@@ -122,10 +108,9 @@ KIWI from inside the virtual environment:
 
    .. code:: shell-session
 
-      $ sudo $PWD/.env3/bin/kiwi-ng-3 system build ...
+      $ sudo $PWD/.tox/3/bin/kiwi-ng system build ...
 
-
-In order to leave the development mode call:
+To leave the development mode, run:
 
 .. code:: shell-session
 
@@ -135,15 +120,15 @@ To resume your work, :command:`cd` into your local Git repository and call:
 
 .. code:: shell-session
 
-    $ source .env3/bin/activate
+    $ source .tox/3/bin/activate
 
 
 Running the Unit Tests
 ----------------------
 
 We use :command:`tox` to run the unit tests. Tox sets up its own
-virtualenvs inside the :file:`.tox` directory for multiple Python versions and should
-thus **not** be invoked from inside your development virtualenv.
+virtualenvs inside the :file:`.tox` directory for multiple Python versions
+and should thus **not** be invoked from inside your development virtualenv.
 
 Before submitting your changes via a pull request, ensure that all tests
 pass and that the code has the required test coverage via the command:
@@ -174,19 +159,13 @@ If you want to see the available targets, use the option `-l` to let
 .. code:: shell-session
 
     $ tox -l
-    check
-    unit_py3_7
-    unit_py3_6
-    unit_py3_4
-    unit_py2_7
-    packagedoc
 
 To only run a special target, use the `-e` option. The following
-example runs the test cases for the Python 3.7 interpreter only:
+example runs the test cases for the Python 3.6 interpreter only:
 
 .. code:: shell-session
 
-    $ tox -e unit_py3_7
+    $ tox -e unit_py3_6
 
 Create a Branch for each Feature or Bugfix
 ------------------------------------------
@@ -219,7 +198,7 @@ Make and commit your changes.
     $ git commit -S -a
 
 Run the tests and code style checks. All of these are also performed by the
-`Travis CI <https://travis-ci.com/SUSE/kiwi>`_ and `GitLab CI
+`Travis CI <https://travis-ci.com/OSInside/kiwi>`_ and `GitLab CI
 <https://gitlab.com/schaefi/kiwi-ci/pipelines>`_ integration test systems
 when a pull request is created.
 
@@ -283,7 +262,7 @@ syntax as supported by Sphinx, an example class is documented as follows:
 
 .. code:: python
 
-   class Example(object):
+   class Example:
        """
        **Example class**
 

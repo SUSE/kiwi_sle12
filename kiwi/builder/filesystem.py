@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with kiwi.  If not, see <http://www.gnu.org/licenses/>
 #
+import logging
 import platform
 import os
 
@@ -25,7 +26,6 @@ from kiwi.storage.loop_device import LoopDevice
 from kiwi.storage.device_provider import DeviceProvider
 from kiwi.system.setup import SystemSetup
 from kiwi.defaults import Defaults
-from kiwi.logger import log
 from kiwi.system.result import Result
 from kiwi.runtime_config import RuntimeConfig
 
@@ -33,8 +33,10 @@ from kiwi.exceptions import (
     KiwiFileSystemSetupError
 )
 
+log = logging.getLogger('kiwi')
 
-class FileSystemBuilder(object):
+
+class FileSystemBuilder:
     """
     **Filesystem image builder**
 
@@ -68,7 +70,8 @@ class FileSystemBuilder(object):
                 self.requested_image_type
             )
         self.filesystem_custom_parameters = {
-            'mount_options': xml_state.get_fs_mount_option_list()
+            'mount_options': xml_state.get_fs_mount_option_list(),
+            'create_options': xml_state.get_fs_create_option_list()
         }
         self.system_setup = SystemSetup(
             xml_state=xml_state, root_dir=self.root_dir

@@ -17,6 +17,7 @@
 #
 import re
 import os
+import logging
 import shutil
 import datetime
 from xml.etree import ElementTree
@@ -32,13 +33,14 @@ from kiwi.utils.sync import DataSync
 from kiwi.utils.block import BlockID
 from kiwi.utils.sysconfig import SysConfig
 from kiwi.path import Path
-from kiwi.logger import log
 from kiwi.defaults import Defaults
 
 from kiwi.exceptions import (
     KiwiVolumeRootIDError,
     KiwiVolumeManagerSetupError
 )
+
+log = logging.getLogger('kiwi')
 
 
 class VolumeManagerBtrfs(VolumeManagerBase):
@@ -116,6 +118,11 @@ class VolumeManagerBtrfs(VolumeManagerBase):
             Command.run(
                 ['btrfs', 'subvolume', 'create', snapshot_volume]
             )
+            volume_mount = MountManager(
+                device=self.device,
+                mountpoint=self.mountpoint + '/.snapshots'
+            )
+            self.subvol_mount_list.append(volume_mount)
             Path.create(snapshot_volume + '/1')
             snapshot = self.mountpoint + '/@/.snapshots/1/snapshot'
             Command.run(
@@ -198,15 +205,6 @@ class VolumeManagerBtrfs(VolumeManagerBase):
         block_operation = BlockID(self.device)
         blkid_type = 'LABEL' if persistency_type == 'by-label' else 'UUID'
         device_id = block_operation.get_blkid(blkid_type)
-        if self.custom_args['root_is_snapshot']:
-            mount_entry_options = mount_options + ['subvol=@/.snapshots']
-            fstab_entry = ' '.join(
-                [
-                    blkid_type + '=' + device_id, '/.snapshots',
-                    'btrfs', ','.join(mount_entry_options), '0 0'
-                ]
-            )
-            fstab_entries.append(fstab_entry)
         for volume_mount in self.subvol_mount_list:
             subvol_name = self._get_subvol_name_from_mountpoint(volume_mount)
             mount_entry_options = mount_options + ['subvol=' + subvol_name]

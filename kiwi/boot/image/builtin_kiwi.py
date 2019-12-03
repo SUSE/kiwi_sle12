@@ -16,19 +16,21 @@
 # along with kiwi.  If not, see <http://www.gnu.org/licenses/>
 #
 import os
+import logging
 from tempfile import mkdtemp
-from collections import namedtuple
 
+# project
 from kiwi.defaults import Defaults
 from kiwi.utils.sync import DataSync
 from kiwi.system.prepare import SystemPrepare
 from kiwi.system.profile import Profile
 from kiwi.system.setup import SystemSetup
-from kiwi.logger import log
 from kiwi.archive.cpio import ArchiveCpio
 from kiwi.utils.compress import Compress
 from kiwi.path import Path
 from kiwi.boot.image.base import BootImageBase
+
+log = logging.getLogger('kiwi')
 
 
 class BootImageKiwi(BootImageBase):
@@ -135,7 +137,7 @@ class BootImageKiwi(BootImageBase):
                 temp_boot_root_directory
             )
             data.sync_data(
-                options=['-z', '-a']
+                options=['-a']
             )
             boot_directory = temp_boot_root_directory + '/boot'
             Path.wipe(boot_directory)
@@ -176,27 +178,3 @@ class BootImageKiwi(BootImageBase):
                 ['--check=crc32', '--lzma2=dict=1MiB', '--threads=0']
             )
             self.initrd_filename = compress.compressed_filename
-
-    def get_boot_names(self):
-        """
-        Provides kernel and initrd names for kiwi boot image
-
-        :return:
-            Contains boot_names_type tuple
-
-            .. code:: python
-
-                boot_names_type(
-                    kernel_name='linux.vmx',
-                    initrd_name='initrd.vmx'
-                )
-
-        :rtype: tuple
-        """
-        boot_names_type = namedtuple(
-            'boot_names_type', ['kernel_name', 'initrd_name']
-        )
-        return boot_names_type(
-            kernel_name='linux.vmx',
-            initrd_name='initrd.vmx'
-        )

@@ -22,36 +22,31 @@ Building Images
    building/build_in_buildservice
    building/working_with_images
 
-* ISO Hybrid Live Image
-
+ISO Hybrid Live Image
   An iso image which can be dumped on a CD/DVD or USB stick
   and boots off from this media without interfering with other
   system storage components. A useful pocket system for testing
   and demo and debugging purposes.
 
-* Virtual Disk Image
-
+Virtual Disk Image
   An image representing the system disk, useful for cloud frameworks
   like Amazon EC2, Google Compute Engine or Microsoft Azure.
 
-* OEM Expandable Disk Image
-
+OEM Expandable Disk Image
   An image representing an expandable system disk. This means after
   deployment the system can resize itself to the new disk geometry.
   The resize operation is configurable as part of the image description
   and an installation image for CD/DVD, USB stick and Network deployment
   can be created in addition.
 
-* PXE root File System Image
-
+PXE root File System Image
   A root filesystem image which can be deployed via KIWI's PXE netboot
   infrastructure. A client configuration file on the pxe server controls
   how the root filesystem image should be deployed. Many different
   deployment strategies are possible, e.g root over NBD, AoE or NFS for
   diskless and diskfull clients.
 
-* Docker Container Image
-
+Docker Container Image
   An archive image suitable for the docker container engine.
   The image can be loaded via the `docker load` command and
   works within the scope of the container engine
@@ -75,21 +70,25 @@ is known to be supported.
 .. table::
    :align: left
 
-   +------------------+------------+---------------+------------------+----------+-------------+-----------+
-   | Host / Image     | CentOS 7   | Fedora 25     | openSUSE Leap 15 | RHEL 7   | openSUSE TW | Ubuntu 16 |
-   +==================+============+===============+==================+==========+=============+===========+
-   | CentOS 7         | yes        | no            | no               | yes      | no          | no        |
-   +------------------+------------+---------------+------------------+----------+-------------+-----------+
-   | Fedora 25        | untested   | yes           | no               | untested | no          | no        |
-   +------------------+------------+---------------+------------------+----------+-------------+-----------+
-   | openSUSE Leap 15 | untested   | **note:dnf**  | yes              | untested | no          | no        |
-   +------------------+------------+---------------+------------------+----------+-------------+-----------+
-   | RHEL 7           | untested   | no            | no               | yes      | no          | no        |
-   +------------------+------------+---------------+------------------+----------+-------------+-----------+
-   | openSUSE TW      | untested   | **note:dnf**  | yes              | untested | yes         | no        |
-   +------------------+------------+---------------+------------------+----------+-------------+-----------+
-   | Ubuntu 16        | no         | no            | no               | no       | no          | yes       |
-   +------------------+------------+---------------+------------------+----------+-------------+-----------+
+   +------------------+------------+---------------+------------------+----------+-------------+-------------+-------------+-------------+
+   | Host / Image     | CentOS 7   | Fedora 30     | openSUSE Leap 15 | RHEL 7   | SLE 12      | SLE 15      | openSUSE TW | Ubuntu 19   |
+   +==================+============+===============+==================+==========+=============+=============+=============+=============+
+   | CentOS 7         | yes        | no            | no               | yes      | no          | no          |  no         | no          |
+   +------------------+------------+---------------+------------------+----------+-------------+-------------+-------------+-------------+
+   | Fedora 30        | untested   | yes           | no               | untested | no          | no          |  no         | no          |
+   +------------------+------------+---------------+------------------+----------+-------------+-------------+-------------+-------------+
+   | openSUSE Leap 15 | untested   | **note:dnf**  | yes              | untested | no          | yes         |  no         | no          |
+   +------------------+------------+---------------+------------------+----------+-------------+-------------+-------------+-------------+
+   | RHEL 7           | untested   | no            | no               | yes      | no          | no          |  no         | no          |
+   +------------------+------------+---------------+------------------+----------+-------------+-------------+-------------+-------------+
+   | SLE 12           | no         | untested      | untested         | no       | yes         | no          |  no         | no          |
+   +------------------+------------+---------------+------------------+----------+-------------+-------------+-------------+-------------+
+   | SLE 15           | untested   | **note:dnf**  | yes              | no       | no          | yes         |  untested   | no          |
+   +------------------+------------+---------------+------------------+----------+-------------+-------------+-------------+-------------+
+   | openSUSE TW      | untested   | **note:dnf**  | yes              | untested | no          | untested    |  yes        | no          |
+   +------------------+------------+---------------+------------------+----------+-------------+-------------+-------------+-------------+
+   | Ubuntu 19        | no         | no            | no               | no       | no          | no          |  no         | yes         |
+   +------------------+------------+---------------+------------------+----------+-------------+-------------+-------------+-------------+
 
 .. admonition:: dnf
 

@@ -17,16 +17,11 @@
 #
 import os
 import struct
+import logging
 from collections import namedtuple
-
-# In python2 bytes is string which is different from
-# the bytes type in python3. The bytes type from the
-# builtins generalizes this type to be bytes always
-from builtins import bytes
 
 # project
 from kiwi.iso_tools.cdrtools import IsoToolsCdrTools
-from kiwi.logger import log
 from kiwi.defaults import Defaults
 from kiwi.command import Command
 from kiwi.utils.codec import Codec
@@ -36,8 +31,10 @@ from kiwi.exceptions import (
     KiwiCommandError
 )
 
+log = logging.getLogger('kiwi')
 
-class Iso(object):
+
+class Iso:
     """
     **Implements helper methods around the creation of ISO filesystems**
 

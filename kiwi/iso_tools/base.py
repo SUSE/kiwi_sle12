@@ -18,16 +18,18 @@
 import os
 import shutil
 import platform
+import logging
 
 # project
 from kiwi.defaults import Defaults
 from kiwi.command import Command
 from kiwi.utils.sync import DataSync
 from kiwi.path import Path
-from kiwi.logger import log
+
+log = logging.getLogger('kiwi')
 
 
-class IsoToolsBase(object):
+class IsoToolsBase:
     """
     **Base Class for Parameter API for iso creation tools**
 
@@ -176,5 +178,5 @@ class IsoToolsBase(object):
             loader_data, media_boot_path
         )
         data.sync_data(
-            options=['-z', '-a']
+            options=['-a']
         )

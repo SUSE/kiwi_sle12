@@ -3,20 +3,15 @@ from mock import patch
 import mock
 from pytest import raises
 
+from .test_helper import argv_kiwi_tests
+
 from kiwi.xml_state import XMLState
 from kiwi.xml_description import XMLDescription
 from kiwi.runtime_checker import RuntimeChecker
 from kiwi.exceptions import KiwiRuntimeError
 
-# default commandline used for any test, overwrite when needed
-sys.argv = [
-    sys.argv[0], 'system', 'prepare',
-    '--description', 'description', '--root', 'directory'
-]
-argv_kiwi_tests = sys.argv
 
-
-class TestRuntimeChecker(object):
+class TestRuntimeChecker:
     def setup(self):
         self.description = XMLDescription(
             '../data/example_runtime_checker_config.xml'
@@ -70,6 +65,14 @@ class TestRuntimeChecker(object):
         self.xml_state.delete_repository_sections()
         with raises(KiwiRuntimeError):
             self.runtime_checker.check_repositories_configured()
+
+    def test_check_volume_setup_defines_reserved_labels(self):
+        xml_state = XMLState(
+            self.description.load(), ['vmxFlavour'], 'vmx'
+        )
+        runtime_checker = RuntimeChecker(xml_state)
+        with raises(KiwiRuntimeError):
+            runtime_checker.check_volume_setup_defines_reserved_labels()
 
     def test_check_volume_setup_defines_multiple_fullsize_volumes(self):
         with raises(KiwiRuntimeError):
@@ -301,3 +304,6 @@ class TestRuntimeChecker(object):
         runtime_checker = RuntimeChecker(xml_state)
         with raises(KiwiRuntimeError):
             runtime_checker.check_architecture_supports_iso_firmware_setup()
+
+    def teardown(self):
+        sys.argv = argv_kiwi_tests

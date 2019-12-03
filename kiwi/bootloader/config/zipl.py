@@ -15,16 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with kiwi.  If not, see <http://www.gnu.org/licenses/>
 #
-
 import platform
+import logging
 import re
-import os
 
 # project
 from kiwi.bootloader.config.base import BootLoaderConfigBase
 from kiwi.bootloader.template.zipl import BootLoaderTemplateZipl
 from kiwi.command import Command
-from kiwi.logger import log
 from kiwi.path import Path
 from kiwi.firmware import FirmWare
 from kiwi.defaults import Defaults
@@ -35,6 +33,8 @@ from kiwi.exceptions import (
     KiwiBootLoaderZiplSetupError,
     KiwiDiskGeometryError
 )
+
+log = logging.getLogger('kiwi')
 
 
 class BootLoaderConfigZipl(BootLoaderConfigBase):
@@ -100,29 +100,9 @@ class BootLoaderConfigZipl(BootLoaderConfigBase):
             with open(config_file, 'w') as config:
                 config.write(self.config)
 
-            log.info('Moving initrd/kernel to zipl boot directory')
-            Command.run(
-                [
-                    'mv',
-                    os.sep.join(
-                        [
-                            self.root_dir, 'boot',
-                            os.readlink(self.root_dir + '/boot/initrd')
-                        ]
-                    ),
-                    os.sep.join(
-                        [
-                            self.root_dir, 'boot',
-                            os.readlink(self.root_dir + '/boot/image')
-                        ]
-                    ),
-                    self._get_zipl_boot_path()
-                ]
-            )
-
     def setup_disk_image_config(
         self, boot_uuid=None, root_uuid=None, hypervisor=None,
-        kernel=None, initrd=None, boot_options=''
+        kernel='image', initrd='initrd', boot_options={}
     ):
         """
         Create the zipl config in memory from a template suitable to
@@ -133,7 +113,7 @@ class BootLoaderConfigZipl(BootLoaderConfigBase):
         :param string hypervisor: unused
         :param string kernel: kernel name
         :param string initrd: initrd name
-        :param string boot_options: kernel options as string
+        :param dict boot_options: unused
         """
         log.info('Creating zipl config file from template')
         parameters = {
@@ -148,13 +128,11 @@ class BootLoaderConfigZipl(BootLoaderConfigBase):
             'title': self.quote_title(self.get_menu_entry_title()),
             'kernel_file': kernel,
             'initrd_file': initrd,
-            'boot_options': ' '.join([self.cmdline, boot_options]),
-            'failsafe_boot_options': ' '.join(
-                [self.cmdline_failsafe, boot_options]
-            )
+            'boot_options': self.cmdline,
+            'failsafe_boot_options': self.cmdline_failsafe
         }
         log.info('--> Using standard disk boot template')
-        template = self.zipl.get_template(self.failsafe_boot)
+        template = self.zipl.get_template(self.failsafe_boot, self.target_type)
         try:
             self.config = template.substitute(parameters)
         except Exception as e:
@@ -174,7 +152,7 @@ class BootLoaderConfigZipl(BootLoaderConfigBase):
         pass
 
     def _get_zipl_boot_path(self):
-        return self.root_dir + '/boot/zipl'
+        return self.boot_dir + '/boot/zipl'
 
     def _get_target_geometry(self):
         if self.target_table_type == 'dasd':

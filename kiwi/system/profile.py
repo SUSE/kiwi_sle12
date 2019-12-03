@@ -23,7 +23,7 @@ from kiwi.system.shell import Shell
 from kiwi.defaults import Defaults
 
 
-class Profile(object):
+class Profile:
     """
     **Create bash readable .profile environment from the XML
     description**
@@ -69,8 +69,6 @@ class Profile(object):
 
         :rtype: str
         """
-        Defaults.set_python_default_encoding_to_utf8()
-
         sorted_profile = collections.OrderedDict(
             sorted(self.dot_profile.items())
         )
@@ -119,8 +117,16 @@ class Profile(object):
                 self._text(oemconfig.get_oem_swapsize())
             self.dot_profile['kiwi_oemrootMB'] = \
                 self._text(oemconfig.get_oem_systemsize())
+
+            # kiwi_oemconfig is used in older boot code to run the swap
+            # creation and setup code at boot time. This version of kiwi
+            # handles swap as part of the build process and therefore
+            # has to disable swap handling such that we stay backward
+            # compatbile for some time.
+            # OBSOLETE: to be removed at: 2020-05-25
             self.dot_profile['kiwi_oemswap'] = \
-                self._text(oemconfig.get_oem_swap())
+                self._text(False)
+
             self.dot_profile['kiwi_oempartition_install'] = \
                 self._text(oemconfig.get_oem_partition_install())
             self.dot_profile['kiwi_oemdevicefilter'] = \

@@ -16,21 +16,22 @@
 # along with kiwi.  If not, see <http://www.gnu.org/licenses/>
 #
 import importlib
+import logging
 from collections import namedtuple
 from xml.etree import ElementTree
 from xml.dom import minidom
 
 # project
-from kiwi.logger import log
-
 from kiwi.exceptions import (
     KiwiSatSolverPluginError,
     KiwiSatSolverJobError,
     KiwiSatSolverJobProblems
 )
 
+log = logging.getLogger('kiwi')
 
-class Sat(object):
+
+class Sat:
     """
     **Sat Solver class to run package solver operations**
 

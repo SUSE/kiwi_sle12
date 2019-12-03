@@ -17,8 +17,6 @@
 #
 import os
 import glob
-import sys
-from six.moves import reload_module
 from collections import namedtuple
 import platform
 from pkg_resources import resource_filename
@@ -33,7 +31,7 @@ from .version import (
 from .exceptions import KiwiBootLoaderGrubDataError
 
 
-class Defaults(object):
+class Defaults:
     """
     **Implements default values**
 
@@ -62,6 +60,20 @@ class Defaults(object):
             'kiwi_sectorsize',
             'kiwi_revision'
         ]
+
+    @staticmethod
+    def get_luks_key_length():
+        """
+        Provides key length to use for random luks keys
+        """
+        return 256
+
+    @staticmethod
+    def get_swapsize_mbytes():
+        """
+        Provides swapsize in MB
+        """
+        return 128
 
     @staticmethod
     def get_xz_compression_options():
@@ -344,6 +356,20 @@ class Defaults(object):
             return 'grub'
 
     @staticmethod
+    def get_grub_config_tool():
+        """
+        Provides full qualified path name to grub mkconfig utility
+
+        :return: file path name
+
+        :rtype: str
+        """
+        for grub_mkconfig_tool in ['grub2-mkconfig', 'grub-mkconfig']:
+            grub_mkconfig_tool_file_path = Path.which(grub_mkconfig_tool)
+            if grub_mkconfig_tool_file_path:
+                return grub_mkconfig_tool_file_path
+
+    @staticmethod
     def get_grub_basic_modules(multiboot):
         """
         Provides list of basic grub modules
@@ -378,6 +404,12 @@ class Defaults(object):
             'xfs',
             'btrfs',
             'lvm',
+            'luks',
+            'gcry_rijndael',
+            'gcry_sha256',
+            'gcry_sha512',
+            'crypto',
+            'cryptodisk',
             'test',
             'true'
         ]
@@ -404,8 +436,7 @@ class Defaults(object):
         ]
         if host_architecture == 'x86_64':
             modules += [
-                'efi_uga',
-                'linuxefi'
+                'efi_uga'
             ]
         return modules
 
@@ -497,7 +528,7 @@ class Defaults(object):
 
         :rtype: str
         """
-        return 'KIWI - http://suse.github.com/kiwi'
+        return 'KIWI - https://github.com/OSInside/kiwi'
 
     @staticmethod
     def get_publisher():
@@ -534,6 +565,24 @@ class Defaults(object):
                 return shim_file
 
     @staticmethod
+    def get_grub_efi_font_directory(root_path):
+        """
+        Provides distribution specific EFI font directory used with grub.
+
+        :param string root_path: image root path
+
+        :return: file path or None
+
+        :rtype: str
+        """
+        font_dir_patterns = [
+            '/boot/efi/EFI/*/fonts'
+        ]
+        for font_dir_pattern in font_dir_patterns:
+            for font_dir in glob.iglob(root_path + font_dir_pattern):
+                return font_dir
+
+    @staticmethod
     def get_unsigned_grub_loader(root_path):
         """
         Provides unsigned grub efi loader file path
@@ -549,7 +598,8 @@ class Defaults(object):
         """
         unsigned_grub_file_patterns = [
             '/usr/share/grub*/*-efi/grub.efi',
-            '/usr/lib/grub*/*-efi/grub.efi'
+            '/usr/lib/grub*/*-efi/grub.efi',
+            '/boot/efi/EFI/*/grubx64.efi'
         ]
         for unsigned_grub_file_pattern in unsigned_grub_file_patterns:
             for unsigned_grub_file in glob.iglob(
@@ -1286,7 +1336,7 @@ class Defaults(object):
 
         :rtype: str
         """
-        return 'cdrtools'
+        return 'xorriso'
 
     @staticmethod
     def get_container_compression():
@@ -1365,22 +1415,6 @@ class Defaults(object):
         :rtype: str
         """
         return 'KIWI {0}'.format(__version__)
-
-    @staticmethod
-    def set_python_default_encoding_to_utf8():
-        """
-        Set python default encoding to utf-8 if not already done
-
-        This is not a safe operation since sys.setdefaultencoding()
-        was removed from sys on purpose when Python starts. Reenabling
-        it and changing the default encoding can break code that relies
-        on ascii being the default. Within the scope of kiwi the
-        operation is safe because all data is expected to be utf-8
-        everywhere and considered a bug if this is not the case
-        """
-        if sys.version_info.major < 3:
-            reload_module(sys)  # Reload required to get setdefaultencoding back
-            sys.setdefaultencoding('utf-8')
 
     @staticmethod
     def get_custom_rpm_macros_path():

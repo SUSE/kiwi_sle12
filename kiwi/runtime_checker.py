@@ -32,7 +32,7 @@ from .exceptions import (
 )
 
 
-class RuntimeChecker(object):
+class RuntimeChecker:
     """
     **Implements build consistency checks at runtime**
 
@@ -136,10 +136,33 @@ class RuntimeChecker(object):
         volume_management = self.xml_state.get_volume_management()
         if volume_management != 'lvm':
             for volume in self.xml_state.get_volumes():
-                if volume.label:
+                if volume.label and volume.name != 'LVSwap':
                     raise KiwiRuntimeError(
                         message.format(volume_management)
                     )
+
+    def check_volume_setup_defines_reserved_labels(self):
+        message = dedent('''\n
+            Reserved label name used in LVM volume setup
+
+            The label setup for volume {0} uses the reserved label {1}.
+            Reserved labels used by KIWI internally are {2}. Please
+            choose another label name for this volume.
+        ''')
+        reserved_labels = [
+            self.xml_state.build_type.get_rootfs_label() or 'ROOT',
+            'SWAP', 'SPARE'
+        ]
+        volume_management = self.xml_state.get_volume_management()
+        if volume_management == 'lvm':
+            for volume in self.xml_state.get_volumes():
+                if volume.name != 'LVSwap':
+                    if volume.label and volume.label in reserved_labels:
+                        raise KiwiRuntimeError(
+                            message.format(
+                                volume.name, volume.label, reserved_labels
+                            )
+                        )
 
     def check_volume_setup_defines_multiple_fullsize_volumes(self):
         """

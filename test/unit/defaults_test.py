@@ -9,7 +9,7 @@ from .test_helper import argv_kiwi_tests
 from kiwi.defaults import Defaults
 
 
-class TestDefaults(object):
+class TestDefaults:
     def setup(self):
         self.defaults = Defaults()
 
@@ -36,7 +36,7 @@ class TestDefaults(object):
         )
 
     def test_get_preparer(self):
-        assert Defaults.get_preparer() == 'KIWI - http://suse.github.com/kiwi'
+        assert Defaults.get_preparer() == 'KIWI - https://github.com/OSInside/kiwi'
 
     def test_get_publisher(self):
         assert Defaults.get_publisher() == 'SUSE LINUX GmbH'
@@ -63,14 +63,6 @@ class TestDefaults(object):
         assert Defaults.get_grub_boot_directory_name(
             lookup_path='lookup_path'
         ) == 'grub'
-
-    @patch('kiwi.defaults.sys')
-    @patch('kiwi.defaults.reload_module')
-    def test_set_python_default_encoding_to_utf8(self, mock_reload, mock_sys):
-        mock_sys.version_info.major = 2
-        Defaults.set_python_default_encoding_to_utf8()
-        mock_reload.assert_called_once_with(mock_sys)
-        mock_sys.setdefaultencoding.assert_called_once_with('utf-8')
 
     def test_get_live_dracut_module_from_flag(self):
         assert Defaults.get_live_dracut_module_from_flag('foo') == \

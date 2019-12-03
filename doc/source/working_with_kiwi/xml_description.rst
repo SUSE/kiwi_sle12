@@ -307,6 +307,25 @@ build types and will be covered here:
   via the `-o` flag to :command:`mount` and are included in
   :file:`/etc/fstab`.
 
+- `fscreateoptions`: Specifies the filesystem options used to create the
+  filesystem. In KIWI the filesystem utility to create a filesystem is
+  called without any custom options. The default options are filesystem
+  specific and are provided along with the package that provides the
+  filesystem utility. For the Linux `ext[234]` filesystem, the default
+  options can be found in the :file:`/etc/mke2fs.conf` file. Other
+  filesystems provides this differently and documents information
+  about options and their defaults in the respective manual page, e.g
+  :command:`man mke2fs`. With the `fscreateoptions` attribute it's possible
+  to directly influence how the filesystem will be created. The options
+  provided as a string are passed to the command that creates the
+  filesystem without any further validation by KIWI. For example, to turn
+  off the journal on creation of an ext4 filesystem the following option
+  would be required:
+
+  .. code:: xml
+
+      <type fscreateoptions="-O ^has_journal"/>
+
 - `kernelcmdline`: Additional kernel parameters passed to the kernel by the
   bootloader.
 
@@ -467,7 +486,7 @@ Profiles can furthermore inherit settings from another profile via the
    <profiles>
        <profile name="VM" description="virtual machine"/>
        <profile name="QEMU" description="virtual machine for QEMU">
-           <requires>VM</requires>
+           <requires profile="VM"/>
        </profile>
    </profiles>
 
@@ -761,7 +780,27 @@ removed), whose name is specified via the mandatory `name` attribute:
    </image>
 
 which adds the package `udev` to the list of packages to be added to the
-initial filesystem.
+initial filesystem. Note, that the value that you pass via the `name`
+attribute is passed directly to the used package manager. Thus, if the
+package manager supports other means how packages can be specified, you may
+pass them in this context too. For example, RPM based package managers
+(like :command:`dnf` or :command:`zypper`) can install packages via their
+`Provides:`. This can be used to add a package that provides a certain
+capability (e.g. `Provides: /usr/bin/my-binary`) via:
+
+.. code:: xml
+
+   <image schemaversion="{schema_version}" name="{exc_image_base_name}">
+       <!-- snip -->
+       <packages type="bootstrap">
+           <package name="/usr/bin/my-binary"/>
+       </packages>
+   </image>
+
+Whether this works depends on the package manager and on the environment
+that is being used. In the Open Build Service, certain `Provides` either
+are not visible or cannot be properly extracted from the KIWI
+description. Therefore, relying on `Provides` is not recommended.
 
 Packages can also be included only on specific architectures via the `arch`
 attribute. KIWI compares the `arch` attributes value with the output of

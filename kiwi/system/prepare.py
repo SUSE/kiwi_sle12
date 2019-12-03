@@ -29,8 +29,6 @@ from kiwi.command_process import CommandProcess
 from kiwi.system.uri import Uri
 from kiwi.archive.tar import ArchiveTar
 
-from kiwi.logger import log
-
 from kiwi.exceptions import (
     KiwiBootStrapPhaseFailed,
     KiwiSystemUpdateFailed,
@@ -40,8 +38,10 @@ from kiwi.exceptions import (
     KiwiPackagesDeletePhaseFailed
 )
 
+log = logging.getLogger('kiwi')
 
-class SystemPrepare(object):
+
+class SystemPrepare:
     """
     Implements preparation and installation of a new root system
 
@@ -139,17 +139,20 @@ class SystemPrepare(object):
             repo_components = xml_repo.get_components()
             repo_repository_gpgcheck = xml_repo.get_repository_gpgcheck()
             repo_package_gpgcheck = xml_repo.get_package_gpgcheck()
+            repo_sourcetype = xml_repo.get_sourcetype()
             log.info('Setting up repository %s', repo_source)
-            log.info('--> Type: %s', repo_type)
+            log.info('--> Type: {0}'.format(repo_type))
+            if repo_sourcetype:
+                log.info('--> SourceType: {0}'.format(repo_sourcetype))
             if repo_priority:
-                log.info('--> Priority: %s', repo_priority)
+                log.info('--> Priority: {0}'.format(repo_priority))
 
             uri = Uri(repo_source, repo_type)
             repo_source_translated = uri.translate()
-            log.info('--> Translated: %s', repo_source_translated)
+            log.info('--> Translated: {0}'.format(repo_source_translated))
             if not repo_alias:
                 repo_alias = uri.alias()
-            log.info('--> Alias: %s', repo_alias)
+            log.info('--> Alias: {0}'.format(repo_alias))
 
             if not uri.is_remote() and not os.path.exists(
                 repo_source_translated
@@ -167,7 +170,8 @@ class SystemPrepare(object):
                 repo_alias, repo_source_translated,
                 repo_type, repo_priority, repo_dist, repo_components,
                 repo_user, repo_secret, uri.credentials_file_name(),
-                repo_repository_gpgcheck, repo_package_gpgcheck
+                repo_repository_gpgcheck, repo_package_gpgcheck,
+                repo_sourcetype
             )
             if clear_cache:
                 repo.delete_repo_cache(repo_alias)
@@ -177,23 +181,27 @@ class SystemPrepare(object):
             repo, package_manager
         )
 
-    def install_bootstrap(self, manager):
+    def install_bootstrap(self, manager, plus_packages=None):
         """
         Install system software using the package manager
         from the host, also known as bootstrapping
 
         :param object manager: instance of a :class:`PackageManager` subclass
+        :param list plus_packages: list of additional packages
 
         :raises KiwiBootStrapPhaseFailed: if the bootstrapping process fails
             either installing packages or including bootstrap archives
         """
-        if not self.xml_state.get_bootstrap_packages_sections():
+        if not self.xml_state.get_bootstrap_packages_sections() \
+           and not plus_packages:
             log.warning('No <packages> sections marked as "bootstrap" found')
             log.info('Processing of bootstrap stage skipped')
             return
 
         log.info('Installing bootstrap packages')
-        bootstrap_packages = self.xml_state.get_bootstrap_packages()
+        bootstrap_packages = self.xml_state.get_bootstrap_packages(
+            plus_packages
+        )
         collection_type = self.xml_state.get_bootstrap_collection_type()
         log.info('--> collection type: %s', collection_type)
         bootstrap_collections = self.xml_state.get_bootstrap_collections()
@@ -292,7 +300,7 @@ class SystemPrepare(object):
                 if manager.has_failed(process.returncode()):
                     raise KiwiInstallPhaseFailed(
                         self.issue_message.format(
-                            headline='Systen package installation failed',
+                            headline='System package installation failed',
                             reason=issue
                         )
                     )

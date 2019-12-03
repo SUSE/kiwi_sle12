@@ -17,6 +17,7 @@
 #
 import glob
 import os
+import logging
 import platform
 from collections import OrderedDict
 from collections import namedtuple
@@ -31,7 +32,6 @@ from kiwi.system.root_init import RootInit
 from kiwi.command import Command
 from kiwi.command_process import CommandProcess
 from kiwi.utils.sync import DataSync
-from kiwi.logger import log
 from kiwi.defaults import Defaults
 from kiwi.system.users import Users
 from kiwi.system.shell import Shell
@@ -46,8 +46,10 @@ from kiwi.exceptions import (
     KiwiScriptFailed
 )
 
+log = logging.getLogger('kiwi')
 
-class SystemSetup(object):
+
+class SystemSetup:
     """
     **Implementation of system setup steps supported by kiwi**
 
@@ -130,6 +132,7 @@ class SystemSetup(object):
             repo_components = xml_repo.get_components()
             repo_repository_gpgcheck = xml_repo.get_repository_gpgcheck()
             repo_package_gpgcheck = xml_repo.get_package_gpgcheck()
+            repo_sourcetype = xml_repo.get_sourcetype()
             uri = Uri(repo_source, repo_type)
             repo_source_translated = uri.translate(
                 check_build_environment=False
@@ -144,7 +147,8 @@ class SystemSetup(object):
                 repo_alias, repo_source_translated,
                 repo_type, repo_priority, repo_dist, repo_components,
                 repo_user, repo_secret, uri.credentials_file_name(),
-                repo_repository_gpgcheck, repo_package_gpgcheck
+                repo_repository_gpgcheck, repo_package_gpgcheck,
+                repo_sourcetype
             )
 
     def import_shell_environment(self, profile):
@@ -238,8 +242,10 @@ class SystemSetup(object):
         machine_id = os.sep.join(
             [self.root_dir, 'etc', 'machine-id']
         )
-        with open(machine_id, 'w'):
-            pass
+
+        if os.path.exists(machine_id):
+            with open(machine_id, 'w'):
+                pass
 
     def setup_permissions(self):
         """
@@ -387,45 +393,24 @@ class SystemSetup(object):
 
             user_exists = system_users.user_exists(user_name)
 
-            options = []
-            if password_format == 'plain':
-                password = self._create_passwd_hash(password)
-            if password:
-                options.append('-p')
-                options.append(password)
-            if user_shell:
-                options.append('-s')
-                options.append(user_shell)
-            if len(user_groups):
-                options.append('-g')
-                options.append(user_groups[0])
-                if len(user_groups) > 1:
-                    options.append('-G')
-                    options.append(','.join(user_groups[1:]))
-            if user_id:
-                options.append('-u')
-                options.append('{0}'.format(user_id))
-            if user_realname:
-                options.append('-c')
-                options.append(user_realname)
-            if not user_exists and home_path:
-                options.append('-m')
-                options.append('-d')
-                options.append(home_path)
+            options = self._process_user_options(
+                password_format, password, user_shell, user_groups,
+                user_id, user_realname, user_exists, home_path
+            )
+
+            group_msg = '--> Primary group for user {0}: {1}'.format(
+                user_name, user_groups[0]
+            ) if len(user_groups) else ''
 
             if user_exists:
-                log.info(
-                    '--> Modifying user: %s [%s]',
-                    user_name,
-                    user_groups[0] if len(user_groups) else ''
-                )
+                log.info('--> Modifying user: {0}'.format(user_name))
+                if group_msg:
+                    log.info(group_msg)
                 system_users.user_modify(user_name, options)
             else:
-                log.info(
-                    '--> Adding user: %s [%s]',
-                    user_name,
-                    user_groups[0] if len(user_groups) else ''
-                )
+                log.info('--> Adding user: {0}'.format(user_name))
+                if group_msg:
+                    log.info(group_msg)
                 system_users.user_add(user_name, options)
                 if home_path:
                     log.info(
@@ -500,7 +485,7 @@ class SystemSetup(object):
                 modprobe_config, target_root_dir + '/etc/'
             )
             data.sync_data(
-                options=['-z', '-a']
+                options=['-a']
             )
 
     def export_package_list(self, target_dir):
@@ -609,20 +594,31 @@ class SystemSetup(object):
         """
         Create etc/fstab from given list of entries
 
-        Also look for an optional fstab.append file which allows
-        to append custom fstab entries to the final fstab. Once
-        embedded the fstab.append file will be deleted
+        Custom fstab modifications are possible and handled
+        in the following order:
 
-        Also look for an optional fstab.patch file which allows
-        to patch the current contents of the fstab file with
-        a given patch file. Once patched the fstab.patch file will
-        be deleted
+        1. Look for an optional fstab.append file which allows
+           to append custom fstab entries to the final fstab. Once
+           embedded the fstab.append file will be deleted
+
+        2. Look for an optional fstab.patch file which allows
+           to patch the current contents of the fstab file with
+           a given patch file. Once patched the fstab.patch file will
+           be deleted
+
+        3. Look for an optional fstab.script file which is called
+           chrooted for the purpose of updating the fstab file as
+           appropriate. Note: There is no validation in place that
+           checks if the script actually handles fstab or any other
+           file in the image rootfs. Once called the fstab.script
+           file will be deleted
 
         :param list entries: list of line entries for fstab
         """
         fstab_file = self.root_dir + '/etc/fstab'
         fstab_append_file = self.root_dir + '/etc/fstab.append'
         fstab_patch_file = self.root_dir + '/etc/fstab.patch'
+        fstab_script_file = self.root_dir + '/etc/fstab.script'
 
         with open(fstab_file, 'w') as fstab:
             for entry in entries:
@@ -637,6 +633,12 @@ class SystemSetup(object):
                 ['patch', fstab_file, fstab_patch_file]
             )
             Path.wipe(fstab_patch_file)
+
+        if os.path.exists(fstab_script_file):
+            Command.run(
+                ['chroot', self.root_dir, '/etc/fstab.script']
+            )
+            Path.wipe(fstab_script_file)
 
     def create_init_link_from_linuxrc(self):
         """
@@ -749,6 +751,38 @@ class SystemSetup(object):
                 '--> Inplace recovery requested, deleting archive'
             )
             Path.wipe(metadata['archive_name'] + '.gz')
+
+    def _process_user_options(
+        self, password_format, password, user_shell, user_groups,
+        user_id, user_realname, user_exists, home_path
+    ):
+        options = []
+        if password_format == 'plain':
+            password = self._create_passwd_hash(password)
+        if password:
+            options.append('-p')
+            options.append(password)
+        if user_shell:
+            options.append('-s')
+            options.append(user_shell)
+        if len(user_groups):
+            options.append('-g')
+            options.append(user_groups[0])
+            if len(user_groups) > 1:
+                options.append('-G')
+                options.append(','.join(user_groups[1:]))
+        if user_id:
+            options.append('-u')
+            options.append('{0}'.format(user_id))
+        if user_realname:
+            options.append('-c')
+            options.append(user_realname)
+        if not user_exists:
+            options.append('-m')
+            if home_path:
+                options.append('-d')
+                options.append(home_path)
+        return options
 
     def _import_cdroot_archive(self):
         glob_match = self.description_dir + '/config-cdroot.tar*'

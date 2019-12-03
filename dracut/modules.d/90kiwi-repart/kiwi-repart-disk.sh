@@ -29,9 +29,6 @@ function initialize {
     root_device=${root#block:}
     export root_device
 
-    swapsize=$(get_requested_swap_size)
-    export swapsize
-
     disk_free_mbytes=$((
         $(get_free_disk_bytes "${disk}") / 1048576
     ))
@@ -41,26 +38,6 @@ function initialize {
         $(get_block_device_kbsize "${root_device}") / 1024
     ))
     export disk_root_mbytes
-}
-
-function get_requested_swap_size {
-    declare kiwi_oemswapMB=${kiwi_oemswapMB}
-    declare kiwi_oemswap=${kiwi_oemswap}
-    local swapsize
-    if [ -n "${kiwi_oemswapMB}" ];then
-        # swap size configured by kiwi description
-        swapsize=${kiwi_oemswapMB}
-    else
-        # default swap size is twice times ramsize
-        swapsize=$((
-            $(grep MemTotal: /proc/meminfo | tr -dc '0-9') * 2 / 1024
-        ))
-    fi
-    if [ ! "${kiwi_oemswap}" = "true" ];then
-        # no swap wanted by kiwi description
-        swapsize=0
-    fi
-    echo ${swapsize}
 }
 
 function deactivate_device_mappings {
@@ -95,21 +72,17 @@ function repart_standard_disk {
     declare kiwi_RootPart=${kiwi_RootPart}
     if [ -z "${kiwi_oemrootMB}" ];then
         local disk_have_root_system_mbytes=$((
-            disk_root_mbytes + disk_free_mbytes - swapsize
+            disk_root_mbytes + disk_free_mbytes
         ))
-        local min_additional_mbytes=${swapsize}
+        local min_additional_mbytes=5
     else
         local disk_have_root_system_mbytes=${kiwi_oemrootMB}
         local min_additional_mbytes=$((
-            swapsize + kiwi_oemrootMB - disk_root_mbytes
+            kiwi_oemrootMB - disk_root_mbytes
         ))
     fi
     if [ "${min_additional_mbytes}" -lt 5 ];then
         min_additional_mbytes=5
-    fi
-    local new_parts=0
-    if [ "${kiwi_oemswap}" = "true" ];then
-        new_parts=$((new_parts + 1))
     fi
     # check if we can repart this disk
     if ! check_repart_possible \
@@ -122,7 +95,7 @@ function repart_standard_disk {
     # repart root partition
     local command_query
     local root_part_size=+${disk_have_root_system_mbytes}M
-    if [ -z "${kiwi_oemrootMB}" ] && [ ${new_parts} -eq 0 ];then
+    if [ -z "${kiwi_oemrootMB}" ];then
         # no new parts and no rootsize limit, use rest disk space
         root_part_size=.
     fi
@@ -132,8 +105,6 @@ function repart_standard_disk {
     "
     create_parted_partitions \
         "${disk}" "${command_query}"
-    # add swap partition
-    create_swap_partition "$new_parts"
     # finalize table changes
     finalize_disk_repart
 }
@@ -153,13 +124,13 @@ function repart_lvm_disk {
         local disk_have_root_system_mbytes=$((
             disk_root_mbytes + disk_free_mbytes
         ))
-        local min_additional_mbytes=${swapsize}
+        local min_additional_mbytes=5
     else
         local disk_have_root_system_mbytes=$((
-            kiwi_oemrootMB + swapsize
+            kiwi_oemrootMB
         ))
         local min_additional_mbytes=$((
-            swapsize + kiwi_oemrootMB - disk_root_mbytes
+            kiwi_oemrootMB - disk_root_mbytes
         ))
     fi
     if [ "${min_additional_mbytes}" -lt 5 ];then
@@ -193,38 +164,6 @@ function repart_lvm_disk {
     finalize_disk_repart
 }
 
-function create_swap_volume {
-    if [ "${swapsize}" -gt "0" ];then
-        if create_volume "LVSwap" "${swapsize}";then
-            set_swap_map "$(get_volume_path_for_volume "LVSwap")"
-        fi
-    fi
-}
-
-function create_swap_partition {
-    declare kiwi_oemrootMB=${kiwi_oemrootMB}
-    declare kiwi_RootPart=${kiwi_RootPart}
-    local new_parts=$1
-    if [ "${swapsize}" -gt "0" ];then
-        local swap_part=$((kiwi_RootPart + 1))
-        local swap_part_size=+${swapsize}M
-        if [ -z "${kiwi_oemrootMB}" ] && [ "${new_parts}" -eq "1" ];then
-            # exactly one new part and no rootsize limit, use rest disk space
-            swap_part_size=.
-        fi
-        command_query="
-            n p:lxswap ${swap_part} . ${swap_part_size}
-            t ${swap_part} 82
-        "
-        create_parted_partitions \
-            "${disk}" "${command_query}"
-        set_swap_map \
-            "$(get_persistent_device_from_unix_node \
-                "$(get_partition_node_name "${disk}" "${swap_part}")" "by-id"
-            )"
-    fi
-}
-
 function check_repart_possible {
     declare kiwi_oemrootMB=${kiwi_oemrootMB}
     local disk_root_mbytes=$1
@@ -233,7 +172,7 @@ function check_repart_possible {
     if [ -n "${kiwi_oemrootMB}" ];then
         if [ "${kiwi_oemrootMB}" -lt "${disk_root_mbytes}" ];then
             # specified oem-systemsize is smaller than root partition
-            warn "Requested OEM systemsize is smaller than root partition"
+            warn "Requested OEM systemsize is smaller than root partition:"
             warn "Disk won't be re-partitioned !"
             echo
             warn "Current Root partition: ${disk_root_mbytes} MB"
@@ -242,19 +181,18 @@ function check_repart_possible {
         fi
     fi
     if [ "${min_additional_mbytes}" -gt "${disk_free_mbytes}" ];then
-        # Requested sizes for root and swap exceeds free space on disk
-        warn "Requested sizes exceeds free space on the disk:"
+        # Requested size for root exceeds free space on disk
+        local requested_size
+        if [ -n "${kiwi_oemrootMB}" ];then
+            requested_size="root:($((kiwi_oemrootMB - disk_root_mbytes)) MB)"
+        else
+            requested_size="root:(keep)"
+        fi
+        warn "Requested OEM systemsize exceeds free space on the disk:"
         warn "Disk won't be re-partitioned !"
         echo
-        warn "Minimum required additional size: ${min_additional_mbytes} MB:"
-        if [ -n "${kiwi_oemrootMB}" ];then
-            local share=$((kiwi_oemrootMB - disk_root_mbytes))
-            warn "==> Root's share is: ${share} MB"
-        fi
-        if [ ${swapsize} -gt 0 ];then
-            warn "==> Swap's share is: ${swapsize} MB"
-        fi
-        warn "Free Space on disk: ${disk_free_mbytes} MB"
+        warn "Requested size(s): ${requested_size}"
+        warn "==> Free Space on disk: ${disk_free_mbytes} MB"
         return 1
     fi
     return 0
@@ -296,6 +234,11 @@ mask_fsck_root_service
 # initialize for disk repartition
 initialize
 
+if ! disk_has_unallocated_space "${disk}";then
+    # already resized or disk has not received any geometry change
+    return
+fi
+
 # prepare disk for repartition
 if [ "$(get_partition_table_type "${disk}")" = 'gpt' ];then
     relocate_gpt_at_end_of_disk "${disk}"
@@ -327,11 +270,7 @@ fi
 if lvm_system; then
     resize_pyhiscal_volumes
     activate_volume_group
-    create_swap_volume
     resize_lvm_volumes_and_filesystems
 else
     resize_filesystem "$(get_root_map)"
 fi
-
-# create swap space
-create_swap "$(get_swap_map)"

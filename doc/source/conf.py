@@ -126,7 +126,7 @@ author = 'Marcus Schäfer'
 # built documents.
 #
 # The short X.Y version.
-version = u'9.17.43'
+version = '9.19.5'
 # The full version, including alpha/beta/rc tags.
 release = version
 
@@ -165,9 +165,9 @@ pygments_style = 'sphinx'
 todo_include_todos = True
 
 extlinks = {
-    'issue': ('https://github.com/SUSE/kiwi/issues/%s', '#'),
-    'pr': ('https://github.com/SUSE/kiwi/pull/%s', 'PR #'),
-    'ghkiwi': ('https://github.com/SUSE/kiwi/blob/master/%s', '')
+    'issue': ('https://github.com/OSInside/kiwi/issues/%s', '#'),
+    'pr': ('https://github.com/OSInside/kiwi/pull/%s', 'PR #'),
+    'ghkiwi': ('https://github.com/OSInside/kiwi/blob/master/%s', '')
 }
 
 

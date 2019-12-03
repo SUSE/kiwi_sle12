@@ -65,7 +65,6 @@ global options for services: image, system
         image build type. If not set the default XML specified
         build type will be used
 """
-from __future__ import print_function
 import sys
 import glob
 import re
@@ -87,7 +86,7 @@ from .version import __version__
 from .help import Help
 
 
-class Cli(object):
+class Cli:
     """
     **Implements the main command line interface**
 
@@ -231,7 +230,9 @@ class Cli(object):
         if not os.path.exists(command_source_file):
             prefix = 'usage:'
             for service_command in self._get_command_implementations(service):
-                print('%s kiwi %s' % (prefix, service_command))
+                print(
+                    '{0} kiwi {1}'.format(prefix, service_command)
+                )
                 prefix = '      '
             raise SystemExit(1)
         self.command_loaded = importlib.import_module(

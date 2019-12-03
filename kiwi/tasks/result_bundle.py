@@ -47,13 +47,13 @@ options:
         are placed to the same download location
 """
 from collections import OrderedDict
+import logging
 import os
 
 # project
 from kiwi.tasks.base import CliTask
 from kiwi.help import Help
 from kiwi.system.result import Result
-from kiwi.logger import log
 from kiwi.path import Path
 from kiwi.utils.compress import Compress
 from kiwi.utils.checksum import Checksum
@@ -62,6 +62,8 @@ from kiwi.command import Command
 from kiwi.exceptions import (
     KiwiBundleError
 )
+
+log = logging.getLogger('kiwi')
 
 
 class ResultBundleTask(CliTask):
@@ -163,7 +165,8 @@ class ResultBundleTask(CliTask):
                     with open(bundle_file + '.sha256', 'w') as shasum:
                         shasum.write(
                             '{0}  {1}'.format(
-                                checksum.sha256(), bundle_file_basename
+                                checksum.sha256(),
+                                os.path.basename(bundle_file)
                             )
                         )
 

@@ -16,14 +16,16 @@
 # along with kiwi.  If not, see <http://www.gnu.org/licenses/>
 #
 import re
+import logging
 
 # project
 from kiwi.command import Command
-from kiwi.logger import log
 from kiwi.exceptions import KiwiCommandCapabilitiesError
 
+log = logging.getLogger('kiwi')
 
-class CommandCapabilities(object):
+
+class CommandCapabilities:
     """
     **Validation of command version flags or version**
 

@@ -15,9 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with kiwi.  If not, see <http://www.gnu.org/licenses/>
 #
+import re
 import os
+import logging
 import platform
 import glob
+import shutil
 from collections import OrderedDict
 
 # project
@@ -26,7 +29,6 @@ from kiwi.bootloader.template.grub2 import BootLoaderTemplateGrub2
 from kiwi.command import Command
 from kiwi.defaults import Defaults
 from kiwi.firmware import FirmWare
-from kiwi.logger import log
 from kiwi.path import Path
 from kiwi.utils.sync import DataSync
 from kiwi.utils.sysconfig import SysConfig
@@ -38,6 +40,8 @@ from kiwi.exceptions import (
     KiwiBootLoaderGrubSecureBootError,
     KiwiBootLoaderGrubFontError,
 )
+
+log = logging.getLogger('kiwi')
 
 
 class BootLoaderConfigGrub2(BootLoaderConfigBase):
@@ -132,145 +136,123 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         self.config = None
         self.efi_boot_path = None
         self.cmdline_failsafe = None
+        self.root_reference = None
         self.cmdline = None
         self.iso_boot = False
         self.shim_fallback_setup = False
 
     def write(self):
         """
-        Write grub.cfg and etc/default/grub file
+        Write bootloader configuration
+
+        * writes grub.cfg template by KIWI if template system is used
+        * copies grub config file to alternative boot path for EFI systems
+          in fallback mode
+        * creates an embedded fat efi image for EFI ISO boot
         """
-        config_dir = self._get_grub2_boot_path()
-        config_file = config_dir + '/grub.cfg'
         if self.config:
-            log.info('Writing grub.cfg file')
+            log.info('Writing KIWI template grub.cfg file')
+            config_dir = self._get_grub2_boot_path()
+            config_file = config_dir + '/grub.cfg'
             Path.create(config_dir)
             with open(config_file, 'w') as config:
                 config.write(self.config)
 
             if self.firmware.efi_mode():
-                if self.iso_boot or self.shim_fallback_setup:
-                    efi_vendor_boot_path = Defaults.get_shim_vendor_directory(
-                        self.root_dir
-                    )
-                    if efi_vendor_boot_path:
-                        grub_config_file_for_efi_boot = os.sep.join(
-                            [efi_vendor_boot_path, 'grub.cfg']
-                        )
-                    else:
-                        grub_config_file_for_efi_boot = os.path.normpath(
-                            os.sep.join([self.efi_boot_path, 'grub.cfg'])
-                        )
-                    log.info(
-                        'Writing {0} file to be found by EFI firmware'.format(
-                            grub_config_file_for_efi_boot
-                        )
-                    )
-                    with open(grub_config_file_for_efi_boot, 'w') as config:
-                        config.write(self.config)
-
+                self._copy_grub_config_to_efi_path(
+                    self.boot_dir, config_file
+                )
                 if self.iso_boot:
                     self._create_embedded_fat_efi_image()
 
-            self._setup_default_grub()
-            self.setup_sysconfig_bootloader()
-
-    def setup_sysconfig_bootloader(self):
+    def write_meta_data(self, root_uuid=None, boot_options=''):
         """
-        Create or update etc/sysconfig/bootloader by the following
-        parameters required according to the grub2 bootloader setup
+        Write bootloader setup meta data files
 
-        * LOADER_TYPE
-        * LOADER_LOCATION
-        * DEFAULT_APPEND
-        * FAILSAFE_APPEND
-        """
-        sysconfig_bootloader_entries = {
-            'LOADER_TYPE':
-                'grub2-efi' if self.firmware.efi_mode() else 'grub2',
-            'LOADER_LOCATION':
-                'none' if self.firmware.efi_mode() else 'mbr'
-        }
-        if self.cmdline:
-            sysconfig_bootloader_entries['DEFAULT_APPEND'] = '"{0}"'.format(
-                self.cmdline
-            )
-        if self.cmdline_failsafe:
-            sysconfig_bootloader_entries['FAILSAFE_APPEND'] = '"{0}"'.format(
-                self.cmdline_failsafe
-            )
+        * cmdline arguments initialization
+        * etc/default/grub setup file
+        * etc/sysconfig/bootloader
 
-        log.info('Writing sysconfig bootloader file')
-        sysconfig_bootloader_location = ''.join(
-            [self.root_dir, '/etc/sysconfig/']
-        )
-        if os.path.exists(sysconfig_bootloader_location):
-            sysconfig_bootloader_file = ''.join(
-                [sysconfig_bootloader_location, 'bootloader']
-            )
-            sysconfig_bootloader = SysConfig(
-                sysconfig_bootloader_file
-            )
-            sysconfig_bootloader_entries_sorted = OrderedDict(
-                sorted(sysconfig_bootloader_entries.items())
-            )
-            for key, value in list(sysconfig_bootloader_entries_sorted.items()):
-                log.info('--> {0}:{1}'.format(key, value))
-                sysconfig_bootloader[key] = value
-            sysconfig_bootloader.write()
-
-    def setup_disk_image_config(
-        self, boot_uuid, root_uuid, hypervisor='xen.gz',
-        kernel=None, initrd=None, boot_options=''
-    ):
-        """
-        Create the grub.cfg in memory from a template suitable to boot
-        from a disk image
-
-        :param string boot_uuid: boot device UUID
         :param string root_uuid: root device UUID
-        :param string hypervisor: hypervisor name
-        :param string kernel: kernel name
-        :param string initrd: initrd name
         :param string boot_options: kernel options as string
+        :param bool iso_boot: indicate target is an ISO
         """
-        log.info('Creating grub2 config file from template')
         self.cmdline = ' '.join(
             [self.get_boot_cmdline(root_uuid), boot_options]
         )
         self.cmdline_failsafe = ' '.join(
             [self.cmdline, Defaults.get_failsafe_kernel_options(), boot_options]
         )
-        parameters = {
-            'search_params': ' '.join(['--fs-uuid', '--set=root', boot_uuid]),
-            'default_boot': '0',
-            'kernel_file': kernel,
-            'initrd_file': initrd,
-            'boot_options': self.cmdline,
-            'failsafe_boot_options': self.cmdline_failsafe,
-            'gfxmode': self.gfxmode,
-            'theme': self.theme,
-            'boot_timeout': self.timeout,
-            'title': self.get_menu_entry_title(),
-            'bootpath': self.get_boot_path('disk'),
-            'boot_directory_name': self.boot_directory_name
-        }
-        if self.multiboot:
-            log.info('--> Using multiboot disk template')
-            parameters['hypervisor'] = hypervisor
-            template = self.grub2.get_multiboot_disk_template(
-                self.failsafe_boot, self.terminal
-            )
-        else:
-            log.info('--> Using hybrid boot disk template')
-            template = self.grub2.get_disk_template(
-                self.failsafe_boot, self.hybrid_boot, self.terminal
-            )
-        try:
-            self.config = template.substitute(parameters)
-        except Exception as e:
-            raise KiwiTemplateError(
-                '%s: %s' % (type(e).__name__, format(e))
+        self.root_reference = self._get_root_cmdline_parameter(root_uuid)
+
+        self._setup_default_grub()
+        self._setup_sysconfig_bootloader()
+
+    def setup_disk_image_config(
+        self, boot_uuid=None, root_uuid=None, hypervisor=None,
+        kernel=None, initrd=None, boot_options={}
+    ):
+        """
+        Create grub2 config file to boot from disk using grub2-mkconfig
+
+        :param string boot_uuid: unused
+        :param string root_uuid: unused
+        :param string hypervisor: unused
+        :param string kernel: unused
+        :param string initrd: unused
+        :param dict boot_options:
+            options dictionary that has to contain the root and boot
+            device and optional volume configuration. KIWI has to
+            mount the system prior to run grub2-mkconfig.
+
+            .. code:: python
+
+                {
+                    'root_device': string,
+                    'boot_device': string,
+                    'efi_device': string,
+                    'system_volumes': volume_manager_instance.get_volumes()
+                }
+        """
+        self._mount_system(
+            boot_options.get('root_device'),
+            boot_options.get('boot_device'),
+            boot_options.get('efi_device'),
+            boot_options.get('system_volumes')
+        )
+        config_file = os.sep.join(
+            [
+                self.root_mount.mountpoint, 'boot',
+                self.boot_directory_name, 'grub.cfg'
+            ]
+        )
+        Command.run(
+            [
+                'chroot', self.root_mount.mountpoint,
+                self._get_grub2_mkconfig_tool(), '-o',
+                config_file.replace(self.root_mount.mountpoint, '')
+            ]
+        )
+        if self.root_filesystem_is_overlay:
+            # grub2-mkconfig has no idea how the correct root= setup is
+            # for disk images created with overlayroot enabled. Because
+            # of that the mkconfig tool just finds the raw partition loop
+            # device and includes it which is wrong. In this particular
+            # case we have to patch the written config file and replace
+            # the wrong root= reference with the correct value such that
+            # the dracut-kiwi-overlay module can boot the system.
+            with open(config_file) as grub_config_file:
+                grub_config = grub_config_file.read()
+                grub_config = grub_config.replace(
+                    'root={0}'.format(boot_options.get('root_device')),
+                    self.root_reference
+                )
+            with open(config_file, 'w') as grub_config_file:
+                grub_config_file.write(grub_config)
+
+        if self.firmware.efi_mode():
+            self._copy_grub_config_to_efi_path(
+                self.root_mount.mountpoint, config_file
             )
 
     def setup_install_image_config(
@@ -286,10 +268,6 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         """
         log.info('Creating grub2 install config file from template')
         self.iso_boot = True
-        self.cmdline = self.get_boot_cmdline()
-        self.cmdline_failsafe = ' '.join(
-            [self.cmdline, Defaults.get_failsafe_kernel_options()]
-        )
         parameters = {
             'search_params': '--file --set=root /boot/' + mbrid.get_id(),
             'default_boot': self.get_install_image_boot_default(),
@@ -307,7 +285,8 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
             'title': self.get_menu_entry_install_title(),
             'bootpath': self.get_boot_path('iso'),
             'boot_directory_name': self.boot_directory_name,
-            'efi_image_name': Defaults.get_efi_image_name(self.arch)
+            'efi_image_name': Defaults.get_efi_image_name(self.arch),
+            'terminal_setup': self.terminal
         }
         if self.multiboot:
             log.info('--> Using multiboot install template')
@@ -343,10 +322,6 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         """
         log.info('Creating grub2 live ISO config file from template')
         self.iso_boot = True
-        self.cmdline = self.get_boot_cmdline()
-        self.cmdline_failsafe = ' '.join(
-            [self.cmdline, Defaults.get_failsafe_kernel_options()]
-        )
         parameters = {
             'search_params': '--file --set=root /boot/' + mbrid.get_id(),
             'default_boot': '0',
@@ -364,7 +339,8 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
             'title': self.get_menu_entry_title(plain=True),
             'bootpath': self.get_boot_path('iso'),
             'boot_directory_name': self.boot_directory_name,
-            'efi_image_name': Defaults.get_efi_image_name(self.arch)
+            'efi_image_name': Defaults.get_efi_image_name(self.arch),
+            'terminal_setup': self.terminal
         }
         if self.multiboot:
             log.info('--> Using multiboot template')
@@ -405,10 +381,10 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
             self._get_grub2_boot_path()
         )
         mbrid.write(
-            self.root_dir + '/boot/' + mbrid.get_id()
+            self.boot_dir + '/boot/' + mbrid.get_id()
         )
         mbrid.write(
-            self.root_dir + '/boot/mbrid'
+            self.boot_dir + '/boot/mbrid'
         )
 
         self._copy_theme_data_to_boot_directory(lookup_path, 'iso')
@@ -468,12 +444,78 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         if self.xen_guest:
             self._copy_xen_modules_to_boot_directory(lookup_path)
 
+    def _copy_grub_config_to_efi_path(self, root_path, config_file):
+        if self.iso_boot or self.shim_fallback_setup:
+            efi_boot_path = Defaults.get_shim_vendor_directory(
+                root_path
+            )
+            if not efi_boot_path:
+                efi_boot_path = os.path.normpath(
+                    os.sep.join([root_path, 'EFI/BOOT'])
+                )
+            Path.create(efi_boot_path)
+            grub_config_file_for_efi_boot = os.sep.join(
+                [efi_boot_path, 'grub.cfg']
+            )
+            log.info(
+                'Copying {0} -> {1} to be found by EFI'.format(
+                    config_file, grub_config_file_for_efi_boot
+                )
+            )
+            shutil.copy(
+                config_file, grub_config_file_for_efi_boot
+            )
+
     def _supports_bios_modules(self):
         if self.arch == 'ix86' or self.arch == 'x86_64':
             return True
         return False
 
-    def _setup_default_grub(self):
+    def _setup_sysconfig_bootloader(self):
+        """
+        Create or update etc/sysconfig/bootloader by the following
+        parameters required according to the grub2 bootloader setup
+
+        * LOADER_TYPE
+        * LOADER_LOCATION
+        * DEFAULT_APPEND
+        * FAILSAFE_APPEND
+        """
+        sysconfig_bootloader_entries = {
+            'LOADER_TYPE':
+                'grub2-efi' if self.firmware.efi_mode() else 'grub2',
+            'LOADER_LOCATION':
+                'none' if self.firmware.efi_mode() else 'mbr'
+        }
+        if self.cmdline:
+            sysconfig_bootloader_entries['DEFAULT_APPEND'] = '"{0}"'.format(
+                self.cmdline
+            )
+        if self.cmdline_failsafe:
+            sysconfig_bootloader_entries['FAILSAFE_APPEND'] = '"{0}"'.format(
+                self.cmdline_failsafe
+            )
+
+        sysconfig_bootloader_location = ''.join(
+            [self.root_dir, '/etc/sysconfig/']
+        )
+        if os.path.exists(sysconfig_bootloader_location):
+            log.info('Writing sysconfig bootloader file')
+            sysconfig_bootloader_file = ''.join(
+                [sysconfig_bootloader_location, 'bootloader']
+            )
+            sysconfig_bootloader = SysConfig(
+                sysconfig_bootloader_file
+            )
+            sysconfig_bootloader_entries_sorted = OrderedDict(
+                sorted(sysconfig_bootloader_entries.items())
+            )
+            for key, value in list(sysconfig_bootloader_entries_sorted.items()):
+                log.info('--> {0}:{1}'.format(key, value))
+                sysconfig_bootloader[key] = value
+            sysconfig_bootloader.write()
+
+    def _setup_default_grub(self):  # noqa: C901
         """
         Create or update etc/default/grub by parameters required
         according to the root filesystem setup
@@ -486,15 +528,21 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         * GRUB_USE_INITRDEFI
         * GRUB_SERIAL_COMMAND
         * GRUB_CMDLINE_LINUX_DEFAULT
+        * GRUB_GFXMODE
+        * GRUB_TERMINAL
+        * GRUB_DISTRIBUTOR
         """
         grub_default_entries = {
-            'GRUB_TIMEOUT': self.timeout
+            'GRUB_TIMEOUT': self.timeout,
+            'GRUB_GFXMODE': self.gfxmode,
+            'GRUB_TERMINAL': '"{0}"'.format(self.terminal),
+            'GRUB_DISTRIBUTOR': '"{0}"'.format(self.get_menu_entry_title())
         }
         if self.cmdline:
             grub_default_entries['GRUB_CMDLINE_LINUX_DEFAULT'] = '"{0}"'.format(
-                self.cmdline
+                re.sub(r'root=.* |root=.*$', '', self.cmdline).strip()
             )
-        if self.terminal and self.terminal == 'serial':
+        if self.terminal and 'serial' in self.terminal:
             serial_format = '"serial {0} {1} {2} {3} {4}"'
             grub_default_entries['GRUB_SERIAL_COMMAND'] = serial_format.format(
                 '--speed=38400',
@@ -518,10 +566,28 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         if self.firmware.efi_mode():
             # linuxefi/initrdefi only exist on x86, others always use efi
             if self.arch == 'ix86' or self.arch == 'x86_64':
-                grub_default_entries['GRUB_USE_LINUXEFI'] = 'true'
-                grub_default_entries['GRUB_USE_INITRDEFI'] = 'true'
+                use_linuxefi_implemented = Command.run(
+                    [
+                        'grep', '-q', 'GRUB_USE_LINUXEFI',
+                        Defaults.get_grub_config_tool()
+                    ], raise_on_error=False
+                )
+                if use_linuxefi_implemented.returncode == 0:
+                    grub_default_entries['GRUB_USE_LINUXEFI'] = 'true'
+                    grub_default_entries['GRUB_USE_INITRDEFI'] = 'true'
         if self.xml_state.build_type.get_btrfs_root_is_snapshot():
             grub_default_entries['SUSE_BTRFS_SNAPSHOT_BOOTING'] = 'true'
+        if self.custom_args.get('boot_is_crypto'):
+            grub_default_entries['GRUB_ENABLE_CRYPTODISK'] = 'y'
+
+        enable_blscfg_implemented = Command.run(
+            [
+                'grep', '-q', 'GRUB_ENABLE_BLSCFG',
+                Defaults.get_grub_config_tool()
+            ], raise_on_error=False
+        )
+        if enable_blscfg_implemented.returncode == 0:
+            grub_default_entries['GRUB_ENABLE_BLSCFG'] = 'true'
 
         if grub_default_entries:
             log.info('Writing grub2 defaults file')
@@ -553,7 +619,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
             '--> Running fallback setup for shim secure boot efi image'
         )
         if not lookup_path:
-            lookup_path = self.root_dir
+            lookup_path = self.boot_dir
         grub_image = Defaults.get_signed_grub_loader(lookup_path)
         if not grub_image:
             raise KiwiBootLoaderGrubSecureBootError(
@@ -588,7 +654,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         grub modules
         """
         if not lookup_path:
-            lookup_path = self.root_dir
+            lookup_path = self.boot_dir
         grub_image = Defaults.get_unsigned_grub_loader(lookup_path)
         if grub_image:
             log.info('--> Using prebuilt unsigned efi image')
@@ -607,7 +673,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         Provide bios grub image
         """
         if not lookup_path:
-            lookup_path = self.root_dir
+            lookup_path = self.boot_dir
         grub_image = Defaults.get_grub_bios_core_loader(lookup_path)
         if grub_image:
             log.info('--> Using prebuilt bios image')
@@ -635,9 +701,9 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         )
 
     def _create_embedded_fat_efi_image(self):
-        Path.create(self.root_dir + '/boot/' + self.arch)
+        Path.create(self.boot_dir + '/boot/' + self.arch)
         efi_fat_image = ''.join(
-            [self.root_dir + '/boot/', self.arch, '/efi']
+            [self.boot_dir + '/boot/', self.arch, '/efi']
         )
         Command.run(
             ['qemu-img', 'create', efi_fat_image, '15M']
@@ -648,7 +714,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         Command.run(
             [
                 'mcopy', '-Do', '-s', '-i', efi_fat_image,
-                self.root_dir + '/EFI', '::'
+                self.boot_dir + '/EFI', '::'
             ]
         )
 
@@ -664,6 +730,10 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
             self._create_early_boot_script_for_mbrid_search(
                 early_boot_script, mbrid
             )
+        module_list = Defaults.get_grub_efi_modules(multiboot=self.xen_guest)
+        module_path = self._get_efi_modules_path(lookup_path)
+        if os.path.exists(module_path + '/linuxefi.mod'):
+            module_list.append('linuxefi')
         Command.run(
             [
                 self._get_grub2_mkimage_tool() or 'grub2-mkimage',
@@ -671,8 +741,8 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
                 '-o', self._get_efi_image_name(),
                 '-c', early_boot_script,
                 '-p', self.get_boot_path() + '/' + self.boot_directory_name,
-                '-d', self._get_efi_modules_path(lookup_path)
-            ] + Defaults.get_grub_efi_modules(multiboot=self.xen_guest)
+                '-d', module_path
+            ] + module_list
         )
 
     def _create_efi_config_search(self, uuid=None, mbrid=None):
@@ -711,6 +781,23 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
             early_boot.write(
                 'set btrfs_relative_path="yes"{0}'.format(os.linesep)
             )
+            if self.custom_args.get('boot_is_crypto'):
+                early_boot.write(
+                    'insmod cryptodisk{0}'.format(os.linesep)
+                )
+                early_boot.write(
+                    'insmod luks{0}'.format(os.linesep)
+                )
+                early_boot.write(
+                    'cryptomount -u {0}{1}'.format(
+                        uuid.replace('-', ''), os.linesep
+                    )
+                )
+                early_boot.write(
+                    'set root="cryptouuid/{0}"{1}'.format(
+                        uuid.replace('-', ''), os.linesep
+                    )
+                )
             early_boot.write(
                 'search --fs-uuid --set=root {0}{1}'.format(uuid, os.linesep)
             )
@@ -741,8 +828,13 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
             if Path.which(grub_mkimage_tool):
                 return grub_mkimage_tool
 
+    def _get_grub2_mkconfig_tool(self):
+        for grub_mkconfig_tool in ['grub2-mkconfig', 'grub-mkconfig']:
+            if Path.which(grub_mkconfig_tool, root_dir=self.root_dir):
+                return grub_mkconfig_tool
+
     def _get_grub2_boot_path(self):
-        return self.root_dir + '/boot/' + self.boot_directory_name
+        return self.boot_dir + '/boot/' + self.boot_directory_name
 
     def _get_efi_image_name(self):
         return os.sep.join(
@@ -777,7 +869,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
 
     def _get_module_path(self, format_name, lookup_path=None):
         if not lookup_path:
-            lookup_path = self.root_dir
+            lookup_path = self.boot_dir
         return Defaults.get_grub_path(lookup_path, format_name)
 
     def _find_theme_background_file(self, lookup_path):
@@ -792,34 +884,41 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
 
     def _copy_theme_data_to_boot_directory(self, lookup_path, target):
         if not lookup_path:
-            lookup_path = self.root_dir
+            lookup_path = self.boot_dir
+        font_name = 'unicode.pf2'
+        efi_font_dir = Defaults.get_grub_efi_font_directory(
+            lookup_path
+        )
         boot_fonts_dir = os.path.normpath(
             os.sep.join(
                 [
-                    self.root_dir,
+                    self.boot_dir,
                     self.get_boot_path(target),
                     self.boot_directory_name,
                     'fonts'
                 ]
             )
         )
-        Path.create(boot_fonts_dir)
-        boot_unicode_font = boot_fonts_dir + '/unicode.pf2'
-        if not os.path.exists(boot_unicode_font):
-            try:
-                unicode_font = Defaults.get_grub_path(
-                    lookup_path, 'unicode.pf2'
-                )
+        try:
+            unicode_font = Defaults.get_grub_path(
+                lookup_path, font_name
+            )
+            if not os.path.exists(os.sep.join([boot_fonts_dir, font_name])):
+                Path.create(boot_fonts_dir)
                 Command.run(
-                    ['cp', unicode_font, boot_unicode_font]
+                    ['cp', unicode_font, boot_fonts_dir]
                 )
-            except Exception as issue:
-                raise KiwiBootLoaderGrubFontError(
-                    'Setting up unicode font failed with {0}'.format(issue)
+            if efi_font_dir:
+                Command.run(
+                    ['cp', unicode_font, efi_font_dir]
                 )
+        except Exception as issue:
+            raise KiwiBootLoaderGrubFontError(
+                'Setting up unicode font failed with {0}'.format(issue)
+            )
 
         boot_theme_dir = os.sep.join(
-            [self.root_dir, 'boot', self.boot_directory_name, 'themes']
+            [self.boot_dir, 'boot', self.boot_directory_name, 'themes']
         )
         Path.create(boot_theme_dir)
 
@@ -836,7 +935,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
                     # file which was created at install time of the theme
                     # package by the activate-theme script
                     boot_theme_background_backup_file = os.sep.join(
-                        [self.root_dir, 'background.png']
+                        [self.boot_dir, 'background.png']
                     )
                     Command.run(
                         [
@@ -849,7 +948,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
                     theme_dir, boot_theme_dir
                 )
                 data.sync_data(
-                    options=['-z', '-a']
+                    options=['-a']
                 )
                 if boot_theme_background_file:
                     # Install preserved background file to the theme
@@ -867,7 +966,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
                     os.path.dirname(boot_theme_background_file), boot_theme_dir
                 )
                 data.sync_data(
-                    options=['-z', '-a']
+                    options=['-a']
                 )
 
         self._check_boot_theme_exists()
@@ -876,7 +975,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         if self.theme:
             theme_dir = os.sep.join(
                 [
-                    self.root_dir, 'boot', self.boot_directory_name,
+                    self.boot_dir, 'boot', self.boot_directory_name,
                     'themes', self.theme
                 ]
             )
@@ -890,10 +989,10 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         Copy efi boot data from lookup_path to the root directory
         """
         if not lookup_path:
-            lookup_path = self.root_dir
+            lookup_path = self.boot_dir
         efi_path = lookup_path + '/boot/efi/'
         if os.path.exists(efi_path):
-            efi_data = DataSync(efi_path, self.root_dir)
+            efi_data = DataSync(efi_path, self.boot_dir)
             efi_data.sync_data(options=['-a'])
 
     def _copy_efi_modules_to_boot_directory(self, lookup_path):
@@ -919,7 +1018,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
                 module_path + '/', boot_module_path
             )
             data.sync_data(
-                options=['-z', '-a'], exclude=['*.module']
+                options=['-a'], exclude=['*.module']
             )
         except Exception as e:
             raise KiwiBootLoaderGrubModulesError(
@@ -928,7 +1027,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
 
     def _get_shim_install(self):
         chroot_env = {
-            'PATH': os.sep.join([self.root_dir, 'usr', 'sbin'])
+            'PATH': os.sep.join([self.boot_dir, 'usr', 'sbin'])
         }
         return Path.which(
             filename='shim-install', custom_env=chroot_env

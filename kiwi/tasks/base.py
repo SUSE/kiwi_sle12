@@ -31,8 +31,10 @@ from kiwi.exceptions import (
     KiwiConfigFileNotFound
 )
 
+log = logging.getLogger('kiwi')
 
-class CliTask(object):
+
+class CliTask:
     """
     Base class for all task classes, loads the task and provides
     the interface to the command options and the XML description
@@ -47,8 +49,6 @@ class CliTask(object):
         * setup color output
     """
     def __init__(self, should_perform_task_setup=True):
-        from ..logger import log
-
         self.cli = Cli()
 
         # initialize runtime checker
@@ -76,6 +76,7 @@ class CliTask(object):
             'check_boot_description_exists': [],
             'check_consistent_kernel_in_boot_and_system_image': [],
             'check_container_tool_chain_installed': [],
+            'check_volume_setup_defines_reserved_labels': [],
             'check_volume_setup_defines_multiple_fullsize_volumes': [],
             'check_volume_setup_has_no_root_definition': [],
             'check_volume_label_used_with_lvm': [],
@@ -123,8 +124,6 @@ class CliTask(object):
         * :attr:`xml_state`
             Instance of XMLState, stateful data
         """
-        from ..logger import log
-
         log.info('Loading XML description')
         config_file = description_directory + '/config.xml'
         if not os.path.exists(config_file):

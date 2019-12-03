@@ -27,7 +27,7 @@ from kiwi.exceptions import (
 )
 
 
-class ContainerSetupBase(object):
+class ContainerSetupBase:
     """
     Base class for setting up the root system to create
     a container image from for e.g docker. The methods here
@@ -170,7 +170,7 @@ class ContainerSetupBase(object):
         try:
             data = DataSync('/dev/', self.root_dir + '/dev/')
             data.sync_data(
-                options=['-z', '-a', '-x', '--devices', '--specials']
+                options=['-a', '-x', '--devices', '--specials']
             )
         except Exception as e:
             raise KiwiContainerSetupError(

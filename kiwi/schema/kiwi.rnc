@@ -35,6 +35,7 @@ vhd-tag-type = xsd:token {pattern = "[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}"}
 groups-list = xsd:token {pattern = "[a-zA-Z0-9_\-\.]+(,[a-zA-Z0-9_\-\.]+)*"}
 arch-name = xsd:token {pattern = "(x86_64|i586|i686|ix86|aarch64|arm64|armv5el|armv5tel|armv6hl|armv6l|armv7hl|armv7l|ppc|ppc64|ppc64le|s390|s390x)(,(x86_64|i586|i686|ix86|aarch64|arm64|armv5el|armv5tel|armv6hl|armv6l|armv7hl|armv7l|ppc|ppc64|ppc64le|s390|s390x))*"}
 portnum-type = xsd:token {pattern = "(\d+|\d+/(udp|tcp))"}
+grub_console = xsd:token {pattern = "(console|gfxterm|serial)( (console|gfxterm|serial))*"}
 
 #==========================================
 # start with image description
@@ -875,10 +876,10 @@ div {
     k.repository.alias.attribute =
         ## Alias name to be used for this repository. This is an
         ## optional free form text. If not set the source attribute
-        ## value is used and builds the alias name by replacing
-        ## each '/' with a '_'. An alias name should be set if the
-        ## source argument doesn't really explain what this repository
-        ## contains
+        ## value is used and builds the alias name by running a md5 digest
+        ## of the defined URI of the repository. An alias name should be
+        ## set if the source argument doesn't really explain what this
+        ## repository contains.
         attribute alias { text }
     k.repository.components.attribute =
         ## Distribution components, used for deb repositories. If
@@ -920,10 +921,21 @@ div {
         ## Channel username if required. It depends on the url type
         ## whether and how this information is passed
         k.username.attribute
+    k.repository.sourcetype.attribute =
+        ## Specify the source type of the repository path.
+        ## Depending on if the source path is a simple url or a
+        ## pointer to a metadata file or mirror list, the
+        ## configured package manager needs to be setup
+        ## appropriately. By default the source is expected to
+        ## be a simple repository url
+        attribute sourcetype {
+            "baseurl" | "metalink" | "mirrorlist"
+        }
     k.repository.attlist =
         k.repository.type.attribute? &
         k.repository.profiles.attribute? &
         k.repository.alias.attribute? &
+        k.repository.sourcetype.attribute? &
         k.repository.components.attribute? &
         k.repository.distribution.attribute? &
         (
@@ -1156,9 +1168,7 @@ div {
         ## Specifies the bootloader console.
         ## The value only has an effect for the grub bootloader.
         ## By default a graphics console setup is used
-        attribute bootloader_console {
-            "console" | "gfxterm" | "serial"
-        }
+        attribute bootloader_console { grub_console }
         >> sch:pattern [ id = "bootloader_console" is-a = "image_type"
             sch:param [ name = "attr" value = "bootloader_console" ]
             sch:param [ name = "types" value = "oem vmx iso" ]
@@ -1467,6 +1477,9 @@ div {
         ## Specifies the filesystem mount options which also ends up in fstab
         ## The string given here is passed as value to the -o option of mount
         attribute fsmountoptions { text }
+    k.type.fscreateoptions.attribute =
+        ## Specifies options to create the filesystem
+        attribute fscreateoptions { text }
     k.type.hybridpersistent.attribute =
         ## Will trigger the creation of a partition for a COW file
         ## to keep data persistent over a reboot
@@ -1503,7 +1516,7 @@ div {
         }
         >> sch:pattern [ id = "initrd_system" is-a = "image_type"
             sch:param [ name = "attr" value = "initrd_system" ]
-            sch:param [ name = "types" value = "oem" ]
+            sch:param [ name = "types" value = "oem pxe" ]
         ]
     k.type.image.attribute =
         ## Specifies the image type
@@ -1723,6 +1736,7 @@ div {
         k.type.format.attribute? &
         k.type.formatoptions.attribute? &
         k.type.fsmountoptions.attribute? &
+        k.type.fscreateoptions.attribute? &
         k.type.gcelicense.attribute? &
         k.type.hybridpersistent.attribute? &
         k.type.hybridpersistent_filesystem.attribute? &
@@ -1801,7 +1815,7 @@ div {
         attribute shell { text }
     k.user.attlist =
         k.user.groups.attribute? &
-        k.user.home.attribute &
+        k.user.home.attribute? &
         k.user.id.attribute? &
         k.user.name.attribute &
         k.user.password.attribute &
