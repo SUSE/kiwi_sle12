@@ -1349,7 +1349,7 @@ class Defaults:
 
         :rtype: str
         """
-        return 'xorriso'
+        return 'cdrtools'
 
     @staticmethod
     def get_container_compression():
