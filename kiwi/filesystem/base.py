@@ -22,6 +22,7 @@ import copy
 # project
 from kiwi.utils.sync import DataSync
 from kiwi.mount_manager import MountManager
+from kiwi.command import Command
 
 from kiwi.exceptions import (
     KiwiFileSystemSyncError
@@ -85,14 +86,17 @@ class FileSystemBase:
         if custom_args:
             self.custom_args = copy.deepcopy(custom_args)
 
-        if 'create_options' not in self.custom_args:
+        if not self.custom_args.get('create_options'):
             self.custom_args['create_options'] = []
 
-        if 'meta_data' not in self.custom_args:
+        if not self.custom_args.get('meta_data'):
             self.custom_args['meta_data'] = {}
 
-        if 'mount_options' not in self.custom_args:
+        if not self.custom_args.get('mount_options'):
             self.custom_args['mount_options'] = []
+
+        if not self.custom_args.get('fs_attributes'):
+            self.custom_args['fs_attributes'] = []
 
     def create_on_device(self, label=None):
         """
@@ -138,6 +142,7 @@ class FileSystemBase:
         self.filesystem_mount.mount(
             self.custom_args['mount_options']
         )
+        self._apply_attributes()
         data = DataSync(
             self.root_dir, self.filesystem_mount.mountpoint
         )
@@ -146,6 +151,28 @@ class FileSystemBase:
             exclude=exclude
         )
         self.filesystem_mount.umount()
+
+    def _apply_attributes(self):
+        """
+        Apply filesystem attributes
+        """
+        attribute_map = {
+            'synchronous-updates': '+S',
+            'no-copy-on-write': '+C'
+        }
+        for attribute in self.custom_args['fs_attributes']:
+            if attribute_map.get(attribute):
+                log.info(
+                    '--> setting {0} for {1}'.format(
+                        attribute, self.filesystem_mount.mountpoint
+                    )
+                )
+                Command.run(
+                    [
+                        'chattr', attribute_map.get(attribute),
+                        self.filesystem_mount.mountpoint
+                    ]
+                )
 
     def __del__(self):
         if self.filesystem_mount:

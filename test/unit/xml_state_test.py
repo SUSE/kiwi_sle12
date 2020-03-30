@@ -720,7 +720,10 @@ class TestXMLState:
             'history': {
                 'author': 'history author',
                 'comment': 'This is a comment',
-                'created_by': 'created by text'
+                'created_by': 'created by text',
+                'application_id': '123',
+                'package_version': '2003.12.0.0',
+                'launcher': 'app'
             }
         }
         xml_data = self.description.load()
@@ -743,6 +746,9 @@ class TestXMLState:
 
     def test_get_spare_part(self):
         assert self.state.get_build_type_spare_part_size() == 200
+        assert self.state.get_build_type_spare_part_fs_attributes() == [
+            'no-copy-on-write'
+        ]
 
     def test_get_build_type_format_options(self):
         assert self.state.get_build_type_format_options() == {
@@ -811,3 +817,8 @@ class TestXMLState:
         assert self.state.get_rpm_locale() == [
             'POSIX', 'C', 'C.UTF-8', 'en_US', 'de_DE'
         ]
+
+    def test_set_root_partition_uuid(self):
+        assert self.state.get_root_partition_uuid() is None
+        self.state.set_root_partition_uuid('some-id')
+        assert self.state.get_root_partition_uuid() == 'some-id'

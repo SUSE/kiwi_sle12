@@ -43,6 +43,7 @@ from kiwi.system.kernel import Kernel
 from kiwi.storage.subformat import DiskFormat
 from kiwi.system.result import Result
 from kiwi.utils.block import BlockID
+from kiwi.utils.fstab import Fstab
 from kiwi.path import Path
 from kiwi.runtime_config import RuntimeConfig
 from kiwi.partitioner import Partitioner
@@ -139,7 +140,7 @@ class DiskBuilder:
         self.boot_is_crypto = True if self.luks and not \
             self.disk_setup.need_boot_partition() else False
         self.install_media = self._install_image_requested()
-        self.generic_fstab_entries = []
+        self.fstab = Fstab()
 
         # an instance of a class with the sync_data capability
         # representing the entire image system except for the boot/ area
@@ -335,9 +336,6 @@ class DiskBuilder:
                 self.requested_filesystem
             )
             volume_manager.mount_volumes()
-            self.generic_fstab_entries += volume_manager.get_fstab(
-                self.persistency_type, self.requested_filesystem
-            )
             self.system = volume_manager
             device_map['root'] = volume_manager.get_device().get('root')
             device_map['swap'] = volume_manager.get_device().get('swap')
@@ -368,6 +366,9 @@ class DiskBuilder:
             swap.create_on_device(
                 label='SWAP'
             )
+
+        # store root partition uuid for profile
+        self._preserve_root_partition_uuid(device_map)
 
         # create a random image identifier
         self.mbrid = SystemIdentifier()
@@ -438,7 +439,11 @@ class DiskBuilder:
         if self.root_filesystem_is_overlay:
             squashed_root_file = NamedTemporaryFile()
             squashed_root = FileSystemSquashFs(
-                device_provider=None, root_dir=self.root_dir
+                device_provider=None, root_dir=self.root_dir,
+                custom_args={
+                    'compression':
+                        self.xml_state.build_type.get_squashfscompression()
+                }
             )
             squashed_root.create_on_file(
                 filename=squashed_root_file.name,
@@ -583,7 +588,7 @@ class DiskBuilder:
                 install_image.create_install_pxe_archive()
                 result_instance.add(
                     key='installation_pxe_archive',
-                    filename=install_image.pxename,
+                    filename=install_image.pxetarball,
                     use_for_bundle=True,
                     compress=False,
                     shasum=True
@@ -645,12 +650,19 @@ class DiskBuilder:
     def _build_spare_filesystem(self, device_map):
         if 'spare' in device_map and self.spare_part_fs:
             spare_part_data_path = None
+            spare_part_custom_parameters = {
+                'fs_attributes':
+                    self.xml_state.get_build_type_spare_part_fs_attributes()
+            }
             if self.spare_part_mountpoint:
                 spare_part_data_path = self.root_dir + '{0}/'.format(
                     self.spare_part_mountpoint
                 )
             filesystem = FileSystem(
-                self.spare_part_fs, device_map['spare'], spare_part_data_path
+                self.spare_part_fs,
+                device_map['spare'],
+                spare_part_data_path,
+                spare_part_custom_parameters
             )
             filesystem.create_on_device(
                 label='SPARE'
@@ -744,7 +756,11 @@ class DiskBuilder:
             log.info('--> creating readonly root partition')
             squashed_root_file = NamedTemporaryFile()
             squashed_root = FileSystemSquashFs(
-                device_provider=None, root_dir=self.root_dir
+                device_provider=None, root_dir=self.root_dir,
+                custom_args={
+                    'compression':
+                        self.xml_state.build_type.get_squashfscompression()
+                }
             )
             squashed_root.create_on_file(
                 filename=squashed_root_file.name,
@@ -864,6 +880,24 @@ class DiskBuilder:
             device_map['root'].get_device(), '/',
             custom_root_mount_args, fs_check_interval
         )
+        if device_map.get('boot'):
+            if self.bootloader == 'grub2_s390x_emu':
+                boot_mount_point = '/boot/zipl'
+            else:
+                boot_mount_point = '/boot'
+            self._add_generic_fstab_entry(
+                device_map['boot'].get_device(), boot_mount_point
+            )
+        if device_map.get('efi'):
+            self._add_generic_fstab_entry(
+                device_map['efi'].get_device(), '/boot/efi'
+            )
+        if self.volume_manager_name:
+            volume_fstab_entries = self.system.get_fstab(
+                self.persistency_type, self.requested_filesystem
+            )
+            for volume_fstab_entry in volume_fstab_entries:
+                self.fstab.add_entry(volume_fstab_entry)
         if device_map.get('spare') and \
            self.spare_part_fs and self.spare_part_mountpoint:
             self._add_generic_fstab_entry(
@@ -878,20 +912,8 @@ class DiskBuilder:
                 self._add_generic_fstab_entry(
                     device_map['swap'].get_device(), 'swap'
                 )
-        if device_map.get('boot'):
-            if self.bootloader == 'grub2_s390x_emu':
-                boot_mount_point = '/boot/zipl'
-            else:
-                boot_mount_point = '/boot'
-            self._add_generic_fstab_entry(
-                device_map['boot'].get_device(), boot_mount_point
-            )
-        if device_map.get('efi'):
-            self._add_generic_fstab_entry(
-                device_map['efi'].get_device(), '/boot/efi'
-            )
         setup.create_fstab(
-            self.generic_fstab_entries
+            self.fstab
         )
 
     def _add_simple_fstab_entry(
@@ -904,10 +926,7 @@ class DiskBuilder:
                 device, mount_point, filesystem, ','.join(options), check
             ]
         )
-        if fstab_entry not in self.generic_fstab_entries:
-            self.generic_fstab_entries.append(
-                fstab_entry
-            )
+        self.fstab.add_entry(fstab_entry)
 
     def _add_generic_fstab_entry(
         self, device, mount_point, options=None, check='0 0'
@@ -923,9 +942,16 @@ class DiskBuilder:
                 block_operation.get_filesystem(), ','.join(options), check
             ]
         )
-        if fstab_entry not in self.generic_fstab_entries:
-            self.generic_fstab_entries.append(
-                fstab_entry
+        self.fstab.add_entry(fstab_entry)
+
+    def _preserve_root_partition_uuid(self, device_map):
+        block_operation = BlockID(
+            device_map['root'].get_device()
+        )
+        partition_uuid = block_operation.get_blkid('PARTUUID')
+        if partition_uuid:
+            self.xml_state.set_root_partition_uuid(
+                partition_uuid
             )
 
     def _write_image_identifier_to_system_image(self):

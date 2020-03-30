@@ -3,7 +3,7 @@
 
 #
 # Generated  by generateDS.py version 2.29.24.
-# Python 3.6.5 (default, Mar 31 2018, 19:45:04) [GCC]
+# Python 3.6.10 (default, Jan 16 2020, 09:12:04) [GCC]
 #
 # Command line options:
 #   ('-f', '')
@@ -2566,7 +2566,7 @@ class type_(GeneratedsSuper):
     """The Image Type of the Logical Extend"""
     subclass = None
     superclass = None
-    def __init__(self, boot=None, bootfilesystem=None, firmware=None, bootkernel=None, bootloader=None, bootloader_console=None, zipl_targettype=None, bootpartition=None, bootpartsize=None, efipartsize=None, efiparttable=None, bootprofile=None, boottimeout=None, btrfs_quota_groups=None, btrfs_root_is_snapshot=None, btrfs_root_is_readonly_snapshot=None, compressed=None, devicepersistency=None, editbootconfig=None, editbootinstall=None, filesystem=None, flags=None, format=None, formatoptions=None, fsmountoptions=None, fscreateoptions=None, gcelicense=None, hybridpersistent=None, hybridpersistent_filesystem=None, gpt_hybrid_mbr=None, force_mbr=None, initrd_system=None, image=None, installboot=None, install_continue_on_timeout=None, installprovidefailsafe=None, installiso=None, installstick=None, installpxe=None, mediacheck=None, kernelcmdline=None, luks=None, luksOS=None, mdraid=None, overlayroot=None, primary=None, ramonly=None, rootfs_label=None, spare_part=None, spare_part_mountpoint=None, spare_part_fs=None, spare_part_is_last=None, target_blocksize=None, target_removable=None, vga=None, vhdfixedtag=None, volid=None, wwid_wait_timeout=None, derived_from=None, xen_server=None, publisher=None, disk_start_sector=None, containerconfig=None, machine=None, oemconfig=None, size=None, systemdisk=None, vagrantconfig=None):
+    def __init__(self, boot=None, bootfilesystem=None, firmware=None, bootkernel=None, bootloader=None, bootloader_console=None, zipl_targettype=None, bootpartition=None, bootpartsize=None, efipartsize=None, efiparttable=None, bootprofile=None, boottimeout=None, btrfs_quota_groups=None, btrfs_root_is_snapshot=None, btrfs_root_is_readonly_snapshot=None, compressed=None, devicepersistency=None, editbootconfig=None, editbootinstall=None, filesystem=None, flags=None, format=None, formatoptions=None, fsmountoptions=None, fscreateoptions=None, squashfscompression=None, gcelicense=None, hybridpersistent=None, hybridpersistent_filesystem=None, gpt_hybrid_mbr=None, force_mbr=None, initrd_system=None, image=None, metadata_path=None, installboot=None, install_continue_on_timeout=None, installprovidefailsafe=None, installiso=None, installstick=None, installpxe=None, mediacheck=None, kernelcmdline=None, luks=None, luksOS=None, mdraid=None, overlayroot=None, primary=None, ramonly=None, rootfs_label=None, spare_part=None, spare_part_mountpoint=None, spare_part_fs=None, spare_part_fs_attributes=None, spare_part_is_last=None, target_blocksize=None, target_removable=None, vga=None, vhdfixedtag=None, volid=None, wwid_wait_timeout=None, derived_from=None, xen_server=None, publisher=None, disk_start_sector=None, containerconfig=None, machine=None, oemconfig=None, size=None, systemdisk=None, vagrantconfig=None):
         self.original_tagname_ = None
         self.boot = _cast(None, boot)
         self.bootfilesystem = _cast(None, bootfilesystem)
@@ -2594,6 +2594,7 @@ class type_(GeneratedsSuper):
         self.formatoptions = _cast(None, formatoptions)
         self.fsmountoptions = _cast(None, fsmountoptions)
         self.fscreateoptions = _cast(None, fscreateoptions)
+        self.squashfscompression = _cast(None, squashfscompression)
         self.gcelicense = _cast(None, gcelicense)
         self.hybridpersistent = _cast(bool, hybridpersistent)
         self.hybridpersistent_filesystem = _cast(None, hybridpersistent_filesystem)
@@ -2601,6 +2602,7 @@ class type_(GeneratedsSuper):
         self.force_mbr = _cast(bool, force_mbr)
         self.initrd_system = _cast(None, initrd_system)
         self.image = _cast(None, image)
+        self.metadata_path = _cast(None, metadata_path)
         self.installboot = _cast(None, installboot)
         self.install_continue_on_timeout = _cast(bool, install_continue_on_timeout)
         self.installprovidefailsafe = _cast(bool, installprovidefailsafe)
@@ -2619,6 +2621,7 @@ class type_(GeneratedsSuper):
         self.spare_part = _cast(None, spare_part)
         self.spare_part_mountpoint = _cast(None, spare_part_mountpoint)
         self.spare_part_fs = _cast(None, spare_part_fs)
+        self.spare_part_fs_attributes = _cast(None, spare_part_fs_attributes)
         self.spare_part_is_last = _cast(bool, spare_part_is_last)
         self.target_blocksize = _cast(int, target_blocksize)
         self.target_removable = _cast(bool, target_removable)
@@ -2747,6 +2750,8 @@ class type_(GeneratedsSuper):
     def set_fsmountoptions(self, fsmountoptions): self.fsmountoptions = fsmountoptions
     def get_fscreateoptions(self): return self.fscreateoptions
     def set_fscreateoptions(self, fscreateoptions): self.fscreateoptions = fscreateoptions
+    def get_squashfscompression(self): return self.squashfscompression
+    def set_squashfscompression(self, squashfscompression): self.squashfscompression = squashfscompression
     def get_gcelicense(self): return self.gcelicense
     def set_gcelicense(self, gcelicense): self.gcelicense = gcelicense
     def get_hybridpersistent(self): return self.hybridpersistent
@@ -2761,6 +2766,8 @@ class type_(GeneratedsSuper):
     def set_initrd_system(self, initrd_system): self.initrd_system = initrd_system
     def get_image(self): return self.image
     def set_image(self, image): self.image = image
+    def get_metadata_path(self): return self.metadata_path
+    def set_metadata_path(self, metadata_path): self.metadata_path = metadata_path
     def get_installboot(self): return self.installboot
     def set_installboot(self, installboot): self.installboot = installboot
     def get_install_continue_on_timeout(self): return self.install_continue_on_timeout
@@ -2797,6 +2804,8 @@ class type_(GeneratedsSuper):
     def set_spare_part_mountpoint(self, spare_part_mountpoint): self.spare_part_mountpoint = spare_part_mountpoint
     def get_spare_part_fs(self): return self.spare_part_fs
     def set_spare_part_fs(self, spare_part_fs): self.spare_part_fs = spare_part_fs
+    def get_spare_part_fs_attributes(self): return self.spare_part_fs_attributes
+    def set_spare_part_fs_attributes(self, spare_part_fs_attributes): self.spare_part_fs_attributes = spare_part_fs_attributes
     def get_spare_part_is_last(self): return self.spare_part_is_last
     def set_spare_part_is_last(self, spare_part_is_last): self.spare_part_is_last = spare_part_is_last
     def get_target_blocksize(self): return self.target_blocksize
@@ -2832,7 +2841,14 @@ class type_(GeneratedsSuper):
             if not self.gds_validate_simple_patterns(
                     self.validate_partition_size_type_patterns_, value):
                 warnings_.warn('Value "%s" does not match xsd pattern restrictions: %s' % (value.encode('utf-8'), self.validate_partition_size_type_patterns_, ))
-    validate_partition_size_type_patterns_ = [['^\\d+|\\d+M|\\d+G$']]
+    validate_partition_size_type_patterns_ = [['^(\\d+|\\d+M|\\d+G)$']]
+    def validate_fs_attributes(self, value):
+        # Validate type fs_attributes, a restriction on xs:token.
+        if value is not None and Validate_simpletypes_:
+            if not self.gds_validate_simple_patterns(
+                    self.validate_fs_attributes_patterns_, value):
+                warnings_.warn('Value "%s" does not match xsd pattern restrictions: %s' % (value.encode('utf-8'), self.validate_fs_attributes_patterns_, ))
+    validate_fs_attributes_patterns_ = [['^(no-copy-on-write|synchronous-updates)(,(no-copy-on-write|synchronous-updates))*$']]
     def validate_vhd_tag_type(self, value):
         # Validate type vhd-tag-type, a restriction on xs:token.
         if value is not None and Validate_simpletypes_:
@@ -2959,6 +2975,9 @@ class type_(GeneratedsSuper):
         if self.fscreateoptions is not None and 'fscreateoptions' not in already_processed:
             already_processed.add('fscreateoptions')
             outfile.write(' fscreateoptions=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.fscreateoptions), input_name='fscreateoptions')), ))
+        if self.squashfscompression is not None and 'squashfscompression' not in already_processed:
+            already_processed.add('squashfscompression')
+            outfile.write(' squashfscompression=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.squashfscompression), input_name='squashfscompression')), ))
         if self.gcelicense is not None and 'gcelicense' not in already_processed:
             already_processed.add('gcelicense')
             outfile.write(' gcelicense=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.gcelicense), input_name='gcelicense')), ))
@@ -2980,6 +2999,9 @@ class type_(GeneratedsSuper):
         if self.image is not None and 'image' not in already_processed:
             already_processed.add('image')
             outfile.write(' image=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.image), input_name='image')), ))
+        if self.metadata_path is not None and 'metadata_path' not in already_processed:
+            already_processed.add('metadata_path')
+            outfile.write(' metadata_path=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.metadata_path), input_name='metadata_path')), ))
         if self.installboot is not None and 'installboot' not in already_processed:
             already_processed.add('installboot')
             outfile.write(' installboot=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.installboot), input_name='installboot')), ))
@@ -3034,6 +3056,9 @@ class type_(GeneratedsSuper):
         if self.spare_part_fs is not None and 'spare_part_fs' not in already_processed:
             already_processed.add('spare_part_fs')
             outfile.write(' spare_part_fs=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.spare_part_fs), input_name='spare_part_fs')), ))
+        if self.spare_part_fs_attributes is not None and 'spare_part_fs_attributes' not in already_processed:
+            already_processed.add('spare_part_fs_attributes')
+            outfile.write(' spare_part_fs_attributes=%s' % (quote_attrib(self.spare_part_fs_attributes), ))
         if self.spare_part_is_last is not None and 'spare_part_is_last' not in already_processed:
             already_processed.add('spare_part_is_last')
             outfile.write(' spare_part_is_last="%s"' % self.gds_format_boolean(self.spare_part_is_last, input_name='spare_part_is_last'))
@@ -3247,6 +3272,11 @@ class type_(GeneratedsSuper):
         if value is not None and 'fscreateoptions' not in already_processed:
             already_processed.add('fscreateoptions')
             self.fscreateoptions = value
+        value = find_attr_value_('squashfscompression', node)
+        if value is not None and 'squashfscompression' not in already_processed:
+            already_processed.add('squashfscompression')
+            self.squashfscompression = value
+            self.squashfscompression = ' '.join(self.squashfscompression.split())
         value = find_attr_value_('gcelicense', node)
         if value is not None and 'gcelicense' not in already_processed:
             already_processed.add('gcelicense')
@@ -3293,6 +3323,10 @@ class type_(GeneratedsSuper):
             already_processed.add('image')
             self.image = value
             self.image = ' '.join(self.image.split())
+        value = find_attr_value_('metadata_path', node)
+        if value is not None and 'metadata_path' not in already_processed:
+            already_processed.add('metadata_path')
+            self.metadata_path = value
         value = find_attr_value_('installboot', node)
         if value is not None and 'installboot' not in already_processed:
             already_processed.add('installboot')
@@ -3416,6 +3450,12 @@ class type_(GeneratedsSuper):
             already_processed.add('spare_part_fs')
             self.spare_part_fs = value
             self.spare_part_fs = ' '.join(self.spare_part_fs.split())
+        value = find_attr_value_('spare_part_fs_attributes', node)
+        if value is not None and 'spare_part_fs_attributes' not in already_processed:
+            already_processed.add('spare_part_fs_attributes')
+            self.spare_part_fs_attributes = value
+            self.spare_part_fs_attributes = ' '.join(self.spare_part_fs_attributes.split())
+            self.validate_fs_attributes(self.spare_part_fs_attributes)    # validate type fs_attributes
         value = find_attr_value_('spare_part_is_last', node)
         if value is not None and 'spare_part_is_last' not in already_processed:
             already_processed.add('spare_part_is_last')
@@ -4035,7 +4075,7 @@ class volume(GeneratedsSuper):
             if not self.gds_validate_simple_patterns(
                     self.validate_volume_size_type_patterns_, value):
                 warnings_.warn('Value "%s" does not match xsd pattern restrictions: %s' % (value.encode('utf-8'), self.validate_volume_size_type_patterns_, ))
-    validate_volume_size_type_patterns_ = [['^\\d+|\\d+M|\\d+G|all$']]
+    validate_volume_size_type_patterns_ = [['^(\\d+|\\d+M|\\d+G|all)$']]
     def hasContent_(self):
         if (
 
@@ -5563,10 +5603,13 @@ class history(GeneratedsSuper):
     'comment' entry."""
     subclass = None
     superclass = None
-    def __init__(self, created_by=None, author=None, valueOf_=None, mixedclass_=None, content_=None):
+    def __init__(self, created_by=None, author=None, application_id=None, package_version=None, launcher=None, valueOf_=None, mixedclass_=None, content_=None):
         self.original_tagname_ = None
         self.created_by = _cast(None, created_by)
         self.author = _cast(None, author)
+        self.application_id = _cast(None, application_id)
+        self.package_version = _cast(None, package_version)
+        self.launcher = _cast(None, launcher)
         self.valueOf_ = valueOf_
         if mixedclass_ is None:
             self.mixedclass_ = MixedContainer
@@ -5592,8 +5635,21 @@ class history(GeneratedsSuper):
     def set_created_by(self, created_by): self.created_by = created_by
     def get_author(self): return self.author
     def set_author(self, author): self.author = author
+    def get_application_id(self): return self.application_id
+    def set_application_id(self, application_id): self.application_id = application_id
+    def get_package_version(self): return self.package_version
+    def set_package_version(self, package_version): self.package_version = package_version
+    def get_launcher(self): return self.launcher
+    def set_launcher(self, launcher): self.launcher = launcher
     def get_valueOf_(self): return self.valueOf_
     def set_valueOf_(self, valueOf_): self.valueOf_ = valueOf_
+    def validate_package_version_type(self, value):
+        # Validate type package-version-type, a restriction on xs:token.
+        if value is not None and Validate_simpletypes_:
+            if not self.gds_validate_simple_patterns(
+                    self.validate_package_version_type_patterns_, value):
+                warnings_.warn('Value "%s" does not match xsd pattern restrictions: %s' % (value.encode('utf-8'), self.validate_package_version_type_patterns_, ))
+    validate_package_version_type_patterns_ = [['^(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])(\\.(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])){3}$']]
     def hasContent_(self):
         if (
             (1 if type(self.valueOf_) in [int,float] else self.valueOf_)
@@ -5626,6 +5682,15 @@ class history(GeneratedsSuper):
         if self.author is not None and 'author' not in already_processed:
             already_processed.add('author')
             outfile.write(' author=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.author), input_name='author')), ))
+        if self.application_id is not None and 'application_id' not in already_processed:
+            already_processed.add('application_id')
+            outfile.write(' application_id=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.application_id), input_name='application_id')), ))
+        if self.package_version is not None and 'package_version' not in already_processed:
+            already_processed.add('package_version')
+            outfile.write(' package_version=%s' % (quote_attrib(self.package_version), ))
+        if self.launcher is not None and 'launcher' not in already_processed:
+            already_processed.add('launcher')
+            outfile.write(' launcher=%s' % (self.gds_encode(self.gds_format_string(quote_attrib(self.launcher), input_name='launcher')), ))
     def exportChildren(self, outfile, level, namespaceprefix_='', name_='history', fromsubclass_=False, pretty_print=True):
         pass
     def build(self, node):
@@ -5649,6 +5714,20 @@ class history(GeneratedsSuper):
         if value is not None and 'author' not in already_processed:
             already_processed.add('author')
             self.author = value
+        value = find_attr_value_('application_id', node)
+        if value is not None and 'application_id' not in already_processed:
+            already_processed.add('application_id')
+            self.application_id = value
+        value = find_attr_value_('package_version', node)
+        if value is not None and 'package_version' not in already_processed:
+            already_processed.add('package_version')
+            self.package_version = value
+            self.package_version = ' '.join(self.package_version.split())
+            self.validate_package_version_type(self.package_version)    # validate type package-version-type
+        value = find_attr_value_('launcher', node)
+        if value is not None and 'launcher' not in already_processed:
+            already_processed.add('launcher')
+            self.launcher = value
     def buildChildren(self, child_, node, nodeName_, fromsubclass_=False):
         if not fromsubclass_ and child_.tail is not None:
             obj_ = self.mixedclass_(MixedContainer.CategoryText,
@@ -5663,7 +5742,7 @@ class oemconfig(GeneratedsSuper):
     which are used to repartition and setup the system disk."""
     subclass = None
     superclass = None
-    def __init__(self, oem_boot_title=None, oem_bootwait=None, oem_device_filter=None, oem_nic_filter=None, oem_inplace_recovery=None, oem_kiwi_initrd=None, oem_multipath_scan=None, oem_vmcp_parmfile=None, oem_partition_install=None, oem_reboot=None, oem_reboot_interactive=None, oem_recovery=None, oem_recoveryID=None, oem_recovery_part_size=None, oem_shutdown=None, oem_shutdown_interactive=None, oem_silent_boot=None, oem_silent_install=None, oem_silent_verify=None, oem_skip_verify=None, oem_swap=None, oem_swapsize=None, oem_systemsize=None, oem_unattended=None, oem_unattended_id=None):
+    def __init__(self, oem_boot_title=None, oem_bootwait=None, oem_resize_once=None, oem_device_filter=None, oem_nic_filter=None, oem_inplace_recovery=None, oem_kiwi_initrd=None, oem_multipath_scan=None, oem_vmcp_parmfile=None, oem_partition_install=None, oem_reboot=None, oem_reboot_interactive=None, oem_recovery=None, oem_recoveryID=None, oem_recovery_part_size=None, oem_shutdown=None, oem_shutdown_interactive=None, oem_silent_boot=None, oem_silent_install=None, oem_silent_verify=None, oem_skip_verify=None, oem_swap=None, oem_swapsize=None, oem_systemsize=None, oem_unattended=None, oem_unattended_id=None):
         self.original_tagname_ = None
         if oem_boot_title is None:
             self.oem_boot_title = []
@@ -5673,6 +5752,10 @@ class oemconfig(GeneratedsSuper):
             self.oem_bootwait = []
         else:
             self.oem_bootwait = oem_bootwait
+        if oem_resize_once is None:
+            self.oem_resize_once = []
+        else:
+            self.oem_resize_once = oem_resize_once
         if oem_device_filter is None:
             self.oem_device_filter = []
         else:
@@ -5786,6 +5869,11 @@ class oemconfig(GeneratedsSuper):
     def add_oem_bootwait(self, value): self.oem_bootwait.append(value)
     def insert_oem_bootwait_at(self, index, value): self.oem_bootwait.insert(index, value)
     def replace_oem_bootwait_at(self, index, value): self.oem_bootwait[index] = value
+    def get_oem_resize_once(self): return self.oem_resize_once
+    def set_oem_resize_once(self, oem_resize_once): self.oem_resize_once = oem_resize_once
+    def add_oem_resize_once(self, value): self.oem_resize_once.append(value)
+    def insert_oem_resize_once_at(self, index, value): self.oem_resize_once.insert(index, value)
+    def replace_oem_resize_once_at(self, index, value): self.oem_resize_once[index] = value
     def get_oem_device_filter(self): return self.oem_device_filter
     def set_oem_device_filter(self, oem_device_filter): self.oem_device_filter = oem_device_filter
     def add_oem_device_filter(self, value): self.oem_device_filter.append(value)
@@ -5905,6 +5993,7 @@ class oemconfig(GeneratedsSuper):
         if (
             self.oem_boot_title or
             self.oem_bootwait or
+            self.oem_resize_once or
             self.oem_device_filter or
             self.oem_nic_filter or
             self.oem_inplace_recovery or
@@ -5966,6 +6055,9 @@ class oemconfig(GeneratedsSuper):
         for oem_bootwait_ in self.oem_bootwait:
             showIndent(outfile, level, pretty_print)
             outfile.write('<oem-bootwait>%s</oem-bootwait>%s' % (self.gds_format_boolean(oem_bootwait_, input_name='oem-bootwait'), eol_))
+        for oem_resize_once_ in self.oem_resize_once:
+            showIndent(outfile, level, pretty_print)
+            outfile.write('<oem-resize-once>%s</oem-resize-once>%s' % (self.gds_format_boolean(oem_resize_once_, input_name='oem-resize-once'), eol_))
         for oem_device_filter_ in self.oem_device_filter:
             showIndent(outfile, level, pretty_print)
             outfile.write('<oem-device-filter>%s</oem-device-filter>%s' % (self.gds_encode(self.gds_format_string(quote_xml(oem_device_filter_), input_name='oem-device-filter')), eol_))
@@ -6059,6 +6151,16 @@ class oemconfig(GeneratedsSuper):
                 raise_parse_error(child_, 'requires boolean')
             ival_ = self.gds_validate_boolean(ival_, node, 'oem_bootwait')
             self.oem_bootwait.append(ival_)
+        elif nodeName_ == 'oem-resize-once':
+            sval_ = child_.text
+            if sval_ in ('true', '1'):
+                ival_ = True
+            elif sval_ in ('false', '0'):
+                ival_ = False
+            else:
+                raise_parse_error(child_, 'requires boolean')
+            ival_ = self.gds_validate_boolean(ival_, node, 'oem_resize_once')
+            self.oem_resize_once.append(ival_)
         elif nodeName_ == 'oem-device-filter':
             oem_device_filter_ = child_.text
             oem_device_filter_ = self.gds_validate_string(oem_device_filter_, node, 'oem_device_filter')

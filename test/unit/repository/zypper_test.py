@@ -27,9 +27,6 @@ class TestRepositoryZypper:
         tmpfile.name = 'tmpfile'
         mock_temp.return_value = tmpfile
         self.root_bind = mock.Mock()
-        self.root_bind.move_to_root = mock.Mock(
-            return_value=['root-moved-arguments']
-        )
         self.root_bind.root_dir = '../data'
         self.root_bind.shared_location = '/shared-dir'
         with patch('builtins.open', create=True):
@@ -358,19 +355,12 @@ class TestRepositoryZypper:
             call('../data/shared-dir/zypper/repos/spam')
         ]
 
-    @patch('kiwi.command.Command.run')
-    def test_delete_all_repos(self, mock_command):
+    @patch('kiwi.path.Path.wipe')
+    @patch('kiwi.path.Path.create')
+    def test_delete_all_repos(self, mock_create, mock_wipe):
         self.repo.delete_all_repos()
-        call = mock_command.call_args_list[0]
-        assert mock_command.call_args_list[0] == \
-            call([
-                'rm', '-r', '-f', '../data/shared-dir/zypper/repos'
-            ])
-        call = mock_command.call_args_list[1]
-        assert mock_command.call_args_list[1] == \
-            call([
-                'mkdir', '-p', '../data/shared-dir/zypper/repos'
-            ])
+        mock_wipe.assert_called_once_with('../data/shared-dir/zypper/repos')
+        mock_create.assert_called_once_with('../data/shared-dir/zypper/repos')
 
     @patch('kiwi.path.Path.wipe')
     def test_delete_repo_cache(self, mock_wipe):

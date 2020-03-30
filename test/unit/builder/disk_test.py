@@ -188,6 +188,10 @@ class TestDiskBuilder:
         kiwi.builder.disk.LuksDevice = mock.Mock(
             return_value=self.luks_root
         )
+        self.fstab = mock.Mock()
+        kiwi.builder.disk.Fstab = mock.Mock(
+            return_value=self.fstab
+        )
         self.disk_builder = DiskBuilder(
             XMLState(description.load()), 'target_dir', 'root_dir',
             custom_args={'signing_keys': ['key_file_a', 'key_file_b']}
@@ -376,6 +380,9 @@ class TestDiskBuilder:
             call(['cp', 'root_dir/recovery.partition.size', 'boot_dir']),
             call(['mv', 'initrd', 'root_dir/boot/initrd.vmx']),
         ]
+        self.block_operation.get_blkid.assert_has_calls(
+            [call('PARTUUID')]
+        )
         self.setup.export_package_list.assert_called_once_with(
             'target_dir'
         )
@@ -493,6 +500,9 @@ class TestDiskBuilder:
             call(['cp', 'root_dir/recovery.partition.size', 'boot_dir']),
             call(['mv', 'initrd', 'root_dir/boot/initramfs-1.2.3.img'])
         ]
+        self.block_operation.get_blkid.assert_has_calls(
+            [call('PARTUUID')]
+        )
         self.setup.export_package_list.assert_called_once_with(
             'target_dir'
         )
@@ -539,8 +549,13 @@ class TestDiskBuilder:
             self.disk_builder.create_disk()
 
         assert mock_squashfs.call_args_list == [
-            call(device_provider=None, root_dir='root_dir'),
-            call(device_provider=None, root_dir='root_dir')
+            call(
+                custom_args={'compression': None},
+                device_provider=None, root_dir='root_dir'
+            ), call(
+                custom_args={'compression': None},
+                device_provider=None, root_dir='root_dir'
+            )
         ]
         assert squashfs.create_on_file.call_args_list == [
             call(exclude=['var/cache/kiwi'], filename='tempname'),
@@ -736,7 +751,10 @@ class TestDiskBuilder:
         volume_manager.setup.assert_called_once_with('systemVG')
         volume_manager.create_volumes.assert_called_once_with('btrfs')
         volume_manager.mount_volumes.call_args_list[0].assert_called_once_with()
-        volume_manager.get_fstab.assert_called_once_with(None, 'btrfs')
+        assert volume_manager.get_fstab.call_args_list == [
+            call(None, 'btrfs'),
+            call(None, 'btrfs')
+        ]
         volume_manager.sync_data.assert_called_once_with(
             [
                 'image', '.profile', '.kconfig', '.buildenv', 'var/cache/kiwi',
@@ -746,22 +764,10 @@ class TestDiskBuilder:
         volume_manager.umount_volumes.call_args_list[0].assert_called_once_with(
         )
         self.setup.create_fstab.assert_called_once_with(
-            [
-                'fstab_volume_entries',
-                'UUID=blkid_result / blkid_result_fs ro 0 0',
-                '/dev/systemVG/LVSwap swap swap defaults 0 0',
-                'UUID=blkid_result /boot blkid_result_fs defaults 0 0',
-                'UUID=blkid_result /boot/efi blkid_result_fs defaults 0 0'
-            ]
+            self.disk_builder.fstab
         )
         self.boot_image_task.setup.create_fstab.assert_called_once_with(
-            [
-                'fstab_volume_entries',
-                'UUID=blkid_result / blkid_result_fs ro 0 0',
-                '/dev/systemVG/LVSwap swap swap defaults 0 0',
-                'UUID=blkid_result /boot blkid_result_fs defaults 0 0',
-                'UUID=blkid_result /boot/efi blkid_result_fs defaults 0 0'
-            ]
+            self.disk_builder.fstab
         )
 
     @patch('kiwi.builder.disk.FileSystem')
@@ -837,7 +843,8 @@ class TestDiskBuilder:
         assert mock_fs.call_args_list[0] == call(
             self.disk_builder.spare_part_fs,
             self.device_map['spare'],
-            'root_dir/var/'
+            'root_dir/var/',
+            {'fs_attributes': None}
         )
         assert filesystem.sync_data.call_args_list.pop() == call(
             [
@@ -846,8 +853,13 @@ class TestDiskBuilder:
                 'boot/*', 'boot/.*', 'boot/efi/*', 'boot/efi/.*'
             ]
         )
-        assert 'UUID=blkid_result /var blkid_result_fs defaults 0 0' in \
-            self.disk_builder.generic_fstab_entries
+        assert [
+            call('UUID=blkid_result / blkid_result_fs ro 0 0'),
+            call('UUID=blkid_result /boot blkid_result_fs defaults 0 0'),
+            call('UUID=blkid_result /boot/efi blkid_result_fs defaults 0 0'),
+            call('UUID=blkid_result /var blkid_result_fs defaults 0 0'),
+            call('UUID=blkid_result swap blkid_result_fs defaults 0 0'),
+        ] in self.disk_builder.fstab.add_entry.call_args_list
 
         self.disk.create_root_partition.reset_mock()
         self.disk.create_spare_partition.reset_mock()

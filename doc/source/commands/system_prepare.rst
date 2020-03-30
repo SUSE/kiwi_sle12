@@ -1,15 +1,17 @@
-kiwi system prepare
-===================
+kiwi-ng system prepare
+======================
+
+.. _db_kiwi_system_prepare_synopsis:
 
 SYNOPSIS
 --------
 
 .. code:: bash
 
-   kiwi [global options] service <command> [<args>]
+   kiwi-ng [global options] service <command> [<args>]
 
-   kiwi system prepare -h | --help
-   kiwi system prepare --description=<directory> --root=<directory>
+   kiwi-ng system prepare -h | --help
+   kiwi-ng system prepare --description=<directory> --root=<directory>
        [--allow-existing-root]
        [--clear-cache]
        [--ignore-repos]
@@ -20,7 +22,9 @@ SYNOPSIS
        [--add-bootstrap-package=<name>...]
        [--delete-package=<name>...]
        [--signing-key=<key-file>...]
-   kiwi system prepare help
+   kiwi-ng system prepare help
+
+.. _db_kiwi_system_prepare_desc:
 
 DESCRIPTION
 -----------
@@ -33,6 +37,8 @@ As the root user you can enter this system via chroot as follows:
 .. code:: bash
 
    $ chroot <directory> bash
+
+.. _db_kiwi_system_prepare_opts:
 
 OPTIONS
 -------

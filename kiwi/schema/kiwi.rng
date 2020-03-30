@@ -48,12 +48,12 @@
   </define>
   <define name="volume-size-type">
     <data type="token">
-      <param name="pattern">\d+|\d+M|\d+G|all</param>
+      <param name="pattern">(\d+|\d+M|\d+G|all)</param>
     </data>
   </define>
   <define name="partition-size-type">
     <data type="token">
-      <param name="pattern">\d+|\d+M|\d+G</param>
+      <param name="pattern">(\d+|\d+M|\d+G)</param>
     </data>
   </define>
   <define name="vhd-tag-type">
@@ -79,6 +79,16 @@
   <define name="grub_console">
     <data type="token">
       <param name="pattern">(console|gfxterm|serial)( (console|gfxterm|serial))*</param>
+    </data>
+  </define>
+  <define name="fs_attributes">
+    <data type="token">
+      <param name="pattern">(no-copy-on-write|synchronous-updates)(,(no-copy-on-write|synchronous-updates))*</param>
+    </data>
+  </define>
+  <define name="package-version-type">
+    <data type="token">
+      <param name="pattern">(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])(\.(0|[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5])){3}</param>
     </data>
   </define>
   <!--
@@ -635,6 +645,30 @@ of the OEM image</a:documentation>
         <a:documentation>For oemboot driven images: halt system after image dump true/false</a:documentation>
         <ref name="k.oem-bootwait.attlist"/>
         <ref name="k.oem-bootwait.content"/>
+      </element>
+    </define>
+  </div>
+  <!--
+    ==========================================
+    common element <oem-resize-once>
+    
+  -->
+  <div>
+    <define name="k.oem-resize-once.content">
+      <data type="boolean"/>
+    </define>
+    <define name="k.oem-resize-once.attlist">
+      <empty/>
+    </define>
+    <define name="k.oem-resize-once">
+      <element name="oem-resize-once">
+        <a:documentation>For oem images: repart/resize only on first boot: true/false
+By default the repart/resize happens on every reboot and
+therefore also allows for disk geometry changes during the
+livetime of the machine. If set to false the repart/resize
+operation happens only once and then never again</a:documentation>
+        <ref name="k.oem-resize-once.attlist"/>
+        <ref name="k.oem-resize-once.content"/>
       </element>
     </define>
   </div>
@@ -1900,6 +1934,18 @@ Can only be configured for the disk image types oem and vmx</a:documentation>
         <sch:param name="types" value="oem vmx"/>
       </sch:pattern>
     </define>
+    <define name="k.type.spare_part_fs_attributes.attribute">
+      <attribute name="spare_part_fs_attributes">
+        <a:documentation>Specify filesystem attributes for the spare partition.
+Attributes can be specified as comma separated list.
+Can only be configured for the disk image types oem and vmx</a:documentation>
+        <ref name="fs_attributes"/>
+      </attribute>
+      <sch:pattern id="spare_part_fs_attributes" is-a="image_type">
+        <sch:param name="attr" value="spare_part_fs_attributes"/>
+        <sch:param name="types" value="oem vmx"/>
+      </sch:pattern>
+    </define>
     <define name="k.type.spare_part_is_last.attribute">
       <attribute name="spare_part_is_last">
         <a:documentation>Specify if the spare partition should be the last one in
@@ -2059,6 +2105,23 @@ structure</a:documentation>
       <sch:pattern id="filesystem_mandatory" is-a="image_type_requirement">
         <sch:param name="attr" value="filesystem"/>
         <sch:param name="types" value="vmx oem pxe"/>
+      </sch:pattern>
+    </define>
+    <define name="k.type.squashfscompression.attribute">
+      <attribute name="squashfscompression">
+        <a:documentation>Specifies the compression type for mksquashfs</a:documentation>
+        <choice>
+          <value>uncompressed</value>
+          <value>gzip</value>
+          <value>lzo</value>
+          <value>lz4</value>
+          <value>xz</value>
+          <value>zstd</value>
+        </choice>
+      </attribute>
+      <sch:pattern id="squashfscompression" is-a="image_type">
+        <sch:param name="attr" value="squashfscompression"/>
+        <sch:param name="types" value="vmx oem pxe iso"/>
       </sch:pattern>
     </define>
     <define name="k.type.overlayroot.attribute">
@@ -2278,8 +2341,24 @@ system does not support all features of the kiwi initrd</a:documentation>
           <value>vmx</value>
           <value>xfs</value>
           <value>oci</value>
+          <value>appx</value>
         </choice>
       </attribute>
+      <sch:pattern id="metadata_path_mandatory" is-a="image_type_requirement">
+        <sch:param name="attr" value="metadata_path"/>
+        <sch:param name="types" value="appx"/>
+      </sch:pattern>
+    </define>
+    <define name="k.type.metadata_path.attribute">
+      <attribute name="metadata_path">
+        <a:documentation>Specifies a path to additional metadata required for
+the selected image type or its tools used to create
+that image type</a:documentation>
+      </attribute>
+      <sch:pattern id="metadata_path" is-a="image_type">
+        <sch:param name="attr" value="metadata_path"/>
+        <sch:param name="types" value="appx"/>
+      </sch:pattern>
     </define>
     <define name="k.type.installboot.attribute">
       <attribute name="installboot">
@@ -2610,6 +2689,9 @@ default.</a:documentation>
           <ref name="k.type.fscreateoptions.attribute"/>
         </optional>
         <optional>
+          <ref name="k.type.squashfscompression.attribute"/>
+        </optional>
+        <optional>
           <ref name="k.type.gcelicense.attribute"/>
         </optional>
         <optional>
@@ -2628,6 +2710,9 @@ default.</a:documentation>
           <ref name="k.type.initrd_system.attribute"/>
         </optional>
         <ref name="k.type.image.attribute"/>
+        <optional>
+          <ref name="k.type.metadata_path.attribute"/>
+        </optional>
         <optional>
           <ref name="k.type.installboot.attribute"/>
         </optional>
@@ -2681,6 +2766,9 @@ default.</a:documentation>
         </optional>
         <optional>
           <ref name="k.type.spare_part_fs.attribute"/>
+        </optional>
+        <optional>
+          <ref name="k.type.spare_part_fs_attributes.attribute"/>
         </optional>
         <optional>
           <ref name="k.type.spare_part_is_last.attribute"/>
@@ -3224,7 +3312,7 @@ references file names in linux lib directories to keep.</a:documentation>
   -->
   <div>
     <sch:pattern abstract="true" id="container_type">
-      <sch:rule context="containerconfig">
+      <sch:rule context="containerconfig[@$attr]">
         <sch:assert test="contains('$types', ../@image)">containerconfig($attr) is only available for the following image types: $types</sch:assert>
       </sch:rule>
     </sch:pattern>
@@ -3236,7 +3324,7 @@ image is imported via the docker load command</a:documentation>
       </attribute>
       <sch:pattern id="name" is-a="container_type">
         <sch:param name="attr" value="name"/>
-        <sch:param name="types" value="docker oci"/>
+        <sch:param name="types" value="docker oci appx"/>
       </sch:pattern>
     </define>
     <define name="k.containerconfig.tag.attribute">
@@ -3626,6 +3714,25 @@ At least one label must be configured</a:documentation>
         <a:documentation>Specifies the 'author' history record.</a:documentation>
       </attribute>
     </define>
+    <define name="k.history.application_id">
+      <attribute name="application_id">
+        <a:documentation>Specifies a custom application ID, used for WSL containers</a:documentation>
+      </attribute>
+    </define>
+    <define name="k.history.package_version">
+      <attribute name="package_version">
+        <a:documentation>Specifies a version information, used for WSL containers.
+The version given here follows the package numbering rules
+as documented in: https://docs.microsoft.com/en-us/windows/uwp/publish/package-version-numbering</a:documentation>
+        <ref name="package-version-type"/>
+      </attribute>
+    </define>
+    <define name="k.history.launcher">
+      <attribute name="launcher">
+        <a:documentation>Specifies name of the container launcher program
+Used for WSL containers</a:documentation>
+      </attribute>
+    </define>
     <define name="k.history.attlist">
       <interleave>
         <optional>
@@ -3633,6 +3740,15 @@ At least one label must be configured</a:documentation>
         </optional>
         <optional>
           <ref name="k.history.author.attribute"/>
+        </optional>
+        <optional>
+          <ref name="k.history.application_id"/>
+        </optional>
+        <optional>
+          <ref name="k.history.package_version"/>
+        </optional>
+        <optional>
+          <ref name="k.history.launcher"/>
         </optional>
       </interleave>
     </define>
@@ -3667,6 +3783,9 @@ and setup the system disk.</a:documentation>
           </optional>
           <optional>
             <ref name="k.oem-bootwait"/>
+          </optional>
+          <optional>
+            <ref name="k.oem-resize-once"/>
           </optional>
           <optional>
             <ref name="k.oem-device-filter"/>

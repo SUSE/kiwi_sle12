@@ -146,7 +146,8 @@ class InstallImageBuilder:
             'meta_data': {
                 'volume_id': self.iso_volume_id,
                 'mbr_id': self.mbrid.get_id(),
-                'efi_mode': self.firmware.efi_mode()
+                'efi_mode': self.firmware.efi_mode(),
+                'ofw_mode': self.firmware.ofw_mode()
             }
         }
 
@@ -180,7 +181,8 @@ class InstallImageBuilder:
             device_provider=None,
             root_dir=self.squashed_contents,
             custom_args={
-                'create_options': self.xml_state.get_fs_create_option_list()
+                'compression':
+                    self.xml_state.build_type.get_squashfscompression()
             }
         )
         squashed_image.create_on_file(squashed_image_file)
@@ -332,6 +334,15 @@ class InstallImageBuilder:
         log.info('Creating pxe install boot image')
         self._create_pxe_install_kernel_and_initrd()
 
+        # create pxe image bound boot config file, contents can be
+        # changed but presence is required.
+        log.info('Creating pxe install boot options file')
+        configname = '{0}.config.bootoptions'.format(self.pxename)
+        shutil.copy(
+            os.sep.join([self.root_dir, 'config.bootoptions']),
+            os.sep.join([self.pxe_dir, configname])
+        )
+
         # create pxe install tarball
         log.info('Creating pxe install archive')
         archive = ArchiveTar(self.pxetarball)
@@ -371,11 +382,13 @@ class InstallImageBuilder:
             self.boot_image_task.include_module(
                 'kiwi-dump', install_media=True
             )
+            self.boot_image_task.include_module(
+                'kiwi-dump-reboot', install_media=True
+            )
             if self.root_filesystem_is_multipath is False:
                 self.boot_image_task.omit_module(
                     'multipath', install_media=True
                 )
-            self._add_system_image_boot_options_to_boot_image()
         self.boot_image_task.create_initrd(
             self.mbrid, 'initrd_kiwi_install',
             install_initrd=True
@@ -410,6 +423,9 @@ class InstallImageBuilder:
         if self.initrd_system == 'dracut':
             self.boot_image_task.include_module(
                 'kiwi-dump', install_media=True
+            )
+            self.boot_image_task.include_module(
+                'kiwi-dump-reboot', install_media=True
             )
             if self.root_filesystem_is_multipath is False:
                 self.boot_image_task.omit_module(

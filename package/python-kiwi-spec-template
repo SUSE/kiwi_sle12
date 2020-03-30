@@ -139,9 +139,8 @@ Requires:       gdisk
 %endif
 Requires:       dosfstools
 Requires:       e2fsprogs
-Requires:       genisoimage
+Requires:       xorriso
 Requires:       grub2
-Requires:       kiwi-man-pages
 Requires:       kiwi-tools
 Requires:       lvm2
 Requires:       mtools
@@ -159,6 +158,9 @@ Requires:       u-boot-tools
 %endif
 %ifarch s390 s390x
 Requires:       s390-tools
+%endif
+%if ! (0%{?rhel} && 0%{?rhel} < 8)
+Recommends:     kiwi-man-pages
 %endif
 
 %description -n python%{python3_pkgversion}-kiwi
@@ -187,6 +189,9 @@ Requires(pre):  shadow-utils
 %else
 Requires(pre):  shadow
 %endif
+%if 0%{?suse_version} >= 1550
+Requires(pre):  user(tftp)
+%endif
 License:        GPL-3.0-or-later
 Group:          %{sysgroup}
 
@@ -207,12 +212,16 @@ BuildRequires:  dracut
 Requires:       bc
 Requires:       cryptsetup
 %if 0%{?fedora} || 0%{?rhel} || 0%{?ubuntu} >= 1804 || 0%{?debian} >= 9
+%if 0%{?rhel} && 0%{?rhel} < 8
 Requires:       btrfs-progs
+%else
+Recommends:     btrfs-progs
+%endif
 Requires:       gdisk
 Requires:       dracut-network
 %else
 %if 0%{?debian} || 0%{?ubuntu}
-Requires:       btrfs-tools
+Recommends:     btrfs-tools
 Requires:       gdisk
 %else
 Requires:       btrfsprogs
@@ -275,16 +284,17 @@ BuildRequires:  dracut
 Requires:       dracut-kiwi-lib
 Requires:       kexec-tools
 Requires:       gawk
+Requires:       kpartx
 License:        GPL-3.0-or-later
 Group:          %{sysgroup}
 
 %description -n dracut-kiwi-oem-dump
-This package contains the kiwi-dump dracut module which is
-used to install an oem image onto a target disk. It implements
-a simple installer which allows for user selected target disk
-or unattended installation to target. The source of the image
-to install could be either from media(CD/DVD/USB) or from
-remote
+This package contains the kiwi-dump and kiwi-dump-reboot dracut
+modules which is used to install an oem image onto a target disk.
+It implements a simple installer which allows for user selected
+target disk or unattended installation to target. The source of
+the image to install could be either from media(CD/DVD/USB) or
+from remote
 
 %package -n dracut-kiwi-live
 Summary:        KIWI - Dracut module for iso(live) image type
@@ -310,7 +320,7 @@ Requires:       dracut-network
 Requires:       device-mapper
 %endif
 Requires:       dracut
-Requires:       genisoimage
+Requires:       xorriso
 Requires:       parted
 License:        GPL-3.0-or-later
 Group:          %{sysgroup}
@@ -389,7 +399,7 @@ done
 %fdupes %{buildroot}/srv/tftpboot
 %endif
 
-%if %{_vendor} != "debbuild"
+%if %{_vendor} != "debbuild" && 0%{?suse_version} < 1550
 %ifarch %{ix86} x86_64
 %pre -n kiwi-pxeboot
 #============================================================
@@ -405,26 +415,25 @@ fi
 %endif
 
 %files -n python%{python3_pkgversion}-kiwi
+%dir %{_defaultdocdir}/python-kiwi
 %{_bindir}/kiwi
 %{_bindir}/kiwi-ng
 %{_bindir}/kiwicompat
 %{_bindir}/kiwi-ng-3*
 %{_bindir}/kiwicompat-3*
 %{python3_sitelib}/kiwi*
-
-%files -n kiwi-man-pages
-%dir %{_defaultdocdir}/python-kiwi
-%{_defaultdocdir}/python-kiwi/kiwi.pdf
+%config %_sysconfdir/bash_completion.d/kiwi-ng.sh
 %{_defaultdocdir}/python-kiwi/LICENSE
 %{_defaultdocdir}/python-kiwi/README
-%config %_sysconfdir/bash_completion.d/kiwi-ng.sh
+
+%files -n kiwi-man-pages
+%{_defaultdocdir}/python-kiwi/kiwi.pdf
 %config %_sysconfdir/kiwi.yml
 %doc %{_mandir}/man8/*
 
 %files -n kiwi-tools
 %{_bindir}/dcounter
 %{_bindir}/isconsole
-%{_bindir}/kversion
 %{_bindir}/utimer
 
 %files -n dracut-kiwi-lib
@@ -435,6 +444,7 @@ fi
 
 %files -n dracut-kiwi-oem-dump
 %{_usr}/lib/dracut/modules.d/90kiwi-dump
+%{_usr}/lib/dracut/modules.d/99kiwi-dump-reboot
 
 %files -n dracut-kiwi-live
 %{_usr}/lib/dracut/modules.d/90kiwi-live
@@ -445,7 +455,9 @@ fi
 %if %{_vendor} != "debbuild"
 %ifarch %{ix86} x86_64
 %files -n kiwi-pxeboot
+%if 0%{?suse_version} < 1550
 %dir %attr(0755,tftp,tftp) /srv/tftpboot
+%endif
 %dir /srv/tftpboot/KIWI
 %dir /srv/tftpboot/pxelinux.cfg
 %dir /srv/tftpboot/image

@@ -91,7 +91,7 @@ class SystemSetup:
         description = self.root_dir + '/image/config.xml'
         log.info('--> Importing state XML description as image/config.xml')
         Path.create(self.root_dir + '/image')
-        with open(description, 'w') as config:
+        with open(description, 'w', encoding='utf-8') as config:
             config.write('<?xml version="1.0" encoding="utf-8"?>')
             self.xml_state.xml_data.export(outfile=config, level=0)
 
@@ -150,21 +150,6 @@ class SystemSetup:
                 repo_repository_gpgcheck, repo_package_gpgcheck,
                 repo_sourcetype
             )
-
-    def import_shell_environment(self, profile):
-        """
-        Create profile environment to let scripts consume
-        information from the XML description.
-
-        :param object profile: instance of :class:`Profile`
-        """
-        profile_file = self.root_dir + '/.profile'
-        log.info('Creating .profile environment')
-        profile_environment = profile.create()
-        with open(profile_file, 'w') as profile:
-            for line in profile_environment:
-                profile.write(line + '\n')
-                log.debug('--> %s', line)
 
     def import_cdroot_files(self, target_dir):
         """
@@ -263,11 +248,8 @@ class SystemSetup:
         If not present KIWI skips this step and continuous with a
         warning.
         """
-        chkstat_search_env = {
-            'PATH': os.sep.join([self.root_dir, 'usr', 'bin'])
-        }
         chkstat = Path.which(
-            'chkstat', custom_env=chkstat_search_env, access_mode=os.X_OK
+            'chkstat', root_dir=self.root_dir, access_mode=os.X_OK
         )
         if chkstat:
             log.info('Check/Fix File Permissions')
@@ -432,11 +414,8 @@ class SystemSetup:
         be found in the image root, it is assumed plymouth splash is in
         use and the tool is called in a chroot operation
         """
-        chroot_env = {
-            'PATH': os.sep.join([self.root_dir, 'usr', 'sbin'])
-        }
         theme_setup = 'plymouth-set-default-theme'
-        if Path.which(filename=theme_setup, custom_env=chroot_env):
+        if Path.which(filename=theme_setup, root_dir=self.root_dir):
             for preferences in self.xml_state.get_preferences_sections():
                 splash_section_content = preferences.get_bootsplash_theme()
                 if splash_section_content:
@@ -590,9 +569,9 @@ class SystemSetup:
             working_directory=working_directory
         )
 
-    def create_fstab(self, entries):
+    def create_fstab(self, fstab):
         """
-        Create etc/fstab from given list of entries
+        Create etc/fstab from given Fstab object
 
         Custom fstab modifications are possible and handled
         in the following order:
@@ -613,17 +592,17 @@ class SystemSetup:
            file in the image rootfs. Once called the fstab.script
            file will be deleted
 
-        :param list entries: list of line entries for fstab
+        :param list fstab: instance of Fstab
         """
         fstab_file = self.root_dir + '/etc/fstab'
         fstab_append_file = self.root_dir + '/etc/fstab.append'
         fstab_patch_file = self.root_dir + '/etc/fstab.patch'
         fstab_script_file = self.root_dir + '/etc/fstab.script'
 
-        with open(fstab_file, 'w') as fstab:
-            for entry in entries:
-                fstab.write(entry + os.linesep)
-            if os.path.exists(fstab_append_file):
+        fstab.export(fstab_file)
+
+        if os.path.exists(fstab_append_file):
+            with open(fstab_file, 'a') as fstab:
                 with open(fstab_append_file, 'r') as append:
                     fstab.write(append.read())
                 Path.wipe(fstab_append_file)
@@ -1004,7 +983,7 @@ class SystemSetup:
                 ) + '\\n'
             ] + dbpath_option
         )
-        with open(filename, 'w') as packages:
+        with open(filename, 'w', encoding='utf-8') as packages:
             packages.write(
                 os.linesep.join(sorted(query_call.output.splitlines()))
             )
@@ -1024,7 +1003,7 @@ class SystemSetup:
                 ) + '\\n'
             ]
         )
-        with open(filename, 'w') as packages:
+        with open(filename, 'w', encoding='utf-8') as packages:
             packages.write(
                 os.linesep.join(sorted(query_call.output.splitlines()))
             )
@@ -1039,7 +1018,7 @@ class SystemSetup:
             command=['rpm', '--root', self.root_dir, '-Va'] + dbpath_option,
             raise_on_error=False
         )
-        with open(filename, 'w') as verified:
+        with open(filename, 'w', encoding='utf-8') as verified:
             verified.write(query_call.output)
 
     def _export_deb_package_verification(self, filename):
@@ -1051,7 +1030,7 @@ class SystemSetup:
             ],
             raise_on_error=False
         )
-        with open(filename, 'w') as verified:
+        with open(filename, 'w', encoding='utf-8') as verified:
             verified.write(query_call.output)
 
     def _get_rpm_database_location(self):

@@ -16,8 +16,8 @@
 # along with kiwi.  If not, see <http://www.gnu.org/licenses/>
 #
 """
-usage: kiwi system build -h | --help
-       kiwi system build --description=<directory> --target-dir=<directory>
+usage: kiwi-ng system build -h | --help
+       kiwi-ng system build --description=<directory> --target-dir=<directory>
            [--allow-existing-root]
            [--clear-cache]
            [--ignore-repos]
@@ -31,7 +31,7 @@ usage: kiwi system build -h | --help
            [--set-container-tag=<name>]
            [--add-container-label=<label>...]
            [--signing-key=<key-file>...]
-       kiwi system build help
+       kiwi-ng system build help
 
 commands:
     build
@@ -218,11 +218,13 @@ class SystemBuildTask(CliTask):
 
         defaults = Defaults()
         defaults.to_profile(profile)
+        profile.create(
+            Defaults.get_profile_file(image_root)
+        )
 
         setup = SystemSetup(
             self.xml_state, image_root
         )
-        setup.import_shell_environment(profile)
 
         setup.import_description()
         setup.import_overlay_files()

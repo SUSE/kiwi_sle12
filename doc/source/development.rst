@@ -1,9 +1,9 @@
-Development and Contributing
-============================
+Contributing
+============
 
-.. hint:: **Abstract**
+.. note:: **Abstract**
 
-   This document describes the development process of KIWI
+   This document describes the development process of {kiwi}
    and how you can be part of it. This description applies
    to version |version|.
 
@@ -11,9 +11,11 @@ Development and Contributing
    :maxdepth: 1
 
    development/kiwi_from_python
-   development/api/kiwi
-   development/schema
+   development/kiwi_plugin_architecture
    development/schema_extensions.rst
+
+The Basics
+----------
 
 The core appliance builder is developed in Python and follows the test
 driven development rules.
@@ -22,15 +24,15 @@ If you want to implement a bigger feature, consider opening an issue on
 GitHub first to discuss the changes. Or join the discussion in the
 ``#kiwi`` channel on `Riot.im <https://about.riot.im>`_.
 
-Fork the upstream KIWI repository
----------------------------------
+Fork the upstream repository
+----------------------------
 
 1. On GitHub, navigate to: https://github.com/OSInside/kiwi
 
 2. In the top-right corner of the page, click :command:`Fork`.
 
-Create a local clone of the forked KIWI repository
---------------------------------------------------
+Create a local clone of the forked repository
+---------------------------------------------
 
 .. code:: shell-session
 
@@ -41,7 +43,7 @@ Create a local clone of the forked KIWI repository
 Install Required Operating System Packages
 ------------------------------------------
 
-KIWI requires the following additional packages which are not provided by
+{kiwi} requires the following additional packages which are not provided by
 :command:`pip`:
 
 XML processing libraries
@@ -93,7 +95,7 @@ environment for Python 3:
    $ source .tox/3/bin/activate
 
 The commands above automatically creates the application script
-called :command:`kiwi-ng`, which allows you to run KIWI from the
+called :command:`kiwi-ng`, which allows you to run {kiwi} from the
 Python sources inside the virtual environment:
 
 .. code:: shell-session
@@ -103,7 +105,7 @@ Python sources inside the virtual environment:
 .. warning::
 
    The virtualenv's `$PATH` will not be taken into account when calling
-   KIWI via :command:`sudo`! Use the absolute path to the KIWI executable
+   {kiwi} via :command:`sudo`! Use the absolute path to the {kiwi} executable
    to run an actual build using your local changes:
 
    .. code:: shell-session
@@ -213,14 +215,14 @@ create a pull request into the upstream repository.
 
     $ git push origin my-topic-branch
 
-Thank you much for contributing to KIWI. Your time and work effort is very
+Thank you much for contributing to {kiwi}. Your time and work effort is very
 much appreciated!
 
 
 Coding Style
 ------------
 
-KIWI follows the general PEP8 guidelines with the following exceptions:
+{kiwi} follows the general PEP8 guidelines with the following exceptions:
 
 - We do not use free functions at all. Even utility functions must be part
   of a class, but should be either prefixed with the `@classmethod` or
@@ -231,14 +233,11 @@ KIWI follows the general PEP8 guidelines with the following exceptions:
 
 - The names of constants are not written in all capital letters.
 
-- We do not use type hints (yet) as the current code base needs to maintain Python
-  2 compatibility.
-
 
 Documentation
 ~~~~~~~~~~~~~
 
-KIWI uses `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for the API and
+{kiwi} uses `Sphinx <https://www.sphinx-doc.org/en/master/>`_ for the API and
 user documentation.
 
 In order to build the HTML documentation call:
@@ -365,11 +364,11 @@ To prepare Git to sign commits, follow these instructions:
 Bumping the Version
 ~~~~~~~~~~~~~~~~~~~
 
-The KIWI project follows the `Semantic Versioning <https://semver.org>`_
+The {kiwi} project follows the `Semantic Versioning <https://semver.org>`_
 scheme. We use the :command:`bumpversion` tool for consistent versioning.
 
 Follow these instructions to bump the major, minor, or patch part of the
-KIWI version. Ensure that your repository is clean (i.e. no modified and
+{kiwi} version. Ensure that your repository is clean (i.e. no modified and
 unknown files exist) beforehand running :command:`bumpversion`.
 
 *  For backwards-compatible bug fixes:

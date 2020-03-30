@@ -36,11 +36,13 @@ def extras(help_, version, options, doc):
     :param bool help_: indicate to show help
     :param string version: version string
     :param list options:
-        list of option tuples
 
-        .. code:: python
+    list of option tuples
 
-            [option(name='name', value='value')]
+    .. code:: python
+
+        [option(name='name', value='value')]
+
     :param string doc: docopt doc string
     """
     if help_ and any((o.name in ('-h', '--help')) and o.value for o in options):
@@ -91,7 +93,7 @@ def usage(command_usage):
     data now always consists out of:
 
     1. the generic call
-       kiwi [global options] service <command> [<args>]
+       kiwi-ng [global options] service <command> [<args>]
 
     2. the command specific usage defined by the docopt string
        short form by default, long form with -h | --help
@@ -113,7 +115,7 @@ def usage(command_usage):
         if process_lines:
             global_options += format(line)
 
-    print('usage: kiwi [global options] service <command> [<args>]\n')
+    print('usage: kiwi-ng [global options] service <command> [<args>]\n')
     print(format(command_usage).replace('usage:', '      '))
     if 'global options' not in format(command_usage):
         print(format(global_options))

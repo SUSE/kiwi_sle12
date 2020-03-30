@@ -201,18 +201,19 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         :param string kernel: unused
         :param string initrd: unused
         :param dict boot_options:
-            options dictionary that has to contain the root and boot
-            device and optional volume configuration. KIWI has to
-            mount the system prior to run grub2-mkconfig.
 
-            .. code:: python
+        options dictionary that has to contain the root and boot
+        device and optional volume configuration. KIWI has to
+        mount the system prior to run grub2-mkconfig.
 
-                {
-                    'root_device': string,
-                    'boot_device': string,
-                    'efi_device': string,
-                    'system_volumes': volume_manager_instance.get_volumes()
-                }
+        .. code:: python
+
+            {
+                'root_device': string,
+                'boot_device': string,
+                'efi_device': string,
+                'system_volumes': volume_manager_instance.get_volumes()
+            }
         """
         self._mount_system(
             boot_options.get('root_device'),
@@ -482,6 +483,7 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
         * LOADER_LOCATION
         * DEFAULT_APPEND
         * FAILSAFE_APPEND
+        * SECURE_BOOT
         """
         sysconfig_bootloader_entries = {
             'LOADER_TYPE':
@@ -489,6 +491,8 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
             'LOADER_LOCATION':
                 'none' if self.firmware.efi_mode() else 'mbr'
         }
+        if self.firmware.efi_mode() == 'uefi':
+            sysconfig_bootloader_entries['SECURE_BOOT'] = 'yes'
         if self.cmdline:
             sysconfig_bootloader_entries['DEFAULT_APPEND'] = '"{0}"'.format(
                 self.cmdline
@@ -1028,9 +1032,6 @@ class BootLoaderConfigGrub2(BootLoaderConfigBase):
             )
 
     def _get_shim_install(self):
-        chroot_env = {
-            'PATH': os.sep.join([self.boot_dir, 'usr', 'sbin'])
-        }
         return Path.which(
-            filename='shim-install', custom_env=chroot_env
+            filename='shim-install', root_dir=self.boot_dir
         )

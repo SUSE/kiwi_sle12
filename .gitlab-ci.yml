@@ -1,0 +1,63 @@
+stages:
+  - test
+  - documentation
+
+variables:
+  LANG: en_US.UTF-8
+  BUILD_IMAGES_PROJECT: kiwi3/kiwi-ci-containers
+  TUMBLEWEED_BUILD: buildenv-tumbleweed
+  FEDORA_BUILD: buildenv-fedora
+
+code_style:
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
+  stage: test
+  script:
+    - tox -e check
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - .tox/3
+
+unit_py36:
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
+  stage: test
+  script:
+    - export PYTHON=python3.6
+    - tox -e unit_py3_6 "-n $(nproc)"
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - .tox/3.6
+
+unit_py37:
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$FEDORA_BUILD
+  stage: test
+  script:
+    - export PYTHON=python3.7
+    - tox -e unit_py3_7 "-n $(nproc)"
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - .tox/3.7
+
+build_doc:
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$TUMBLEWEED_BUILD
+  stage: documentation
+  script:
+    - tox -e packagedoc
+  artifacts:
+    paths:
+      - doc/build/
+  cache:
+    key: "$CI_JOB_NAME"
+    paths:
+      - doc/build
+
+build_suse_doc:
+  image: $CI_REGISTRY/$BUILD_IMAGES_PROJECT:$TUMBLEWEED_BUILD
+  stage: documentation
+  script:
+    - tox -e doc_suse
+  artifacts:
+    paths:
+      - doc/build/

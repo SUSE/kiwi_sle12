@@ -46,6 +46,7 @@ class XMLState:
     :param object build_type: build <type> section reference
     """
     def __init__(self, xml_data, profiles=None, build_type=None):
+        self.root_partition_uuid = None
         self.host_architecture = platform.machine()
         self.xml_data = xml_data
         self.profiles = self._used_profiles(profiles)
@@ -884,6 +885,19 @@ class XMLState:
         spare_part_size = self.build_type.get_spare_part()
         if spare_part_size:
             return self._to_mega_byte(spare_part_size)
+
+    def get_build_type_spare_part_fs_attributes(self):
+        """
+        Build type specific list of filesystem attributes applied to
+        the spare partition.
+
+        :return: list of strings or empty list
+
+        :rtype: list
+        """
+        spare_part_attributes = self.build_type.get_spare_part_fs_attributes()
+        if spare_part_attributes:
+            return spare_part_attributes.strip().split(',')
 
     def get_build_type_format_options(self):
         """
@@ -1795,6 +1809,20 @@ class XMLState:
             ''')
             log.warning(message.format(uri))
 
+    def set_root_partition_uuid(self, uuid):
+        """
+        Store PARTUUID provided in uuid as state information
+
+        :param string uuid: PARTUUID
+        """
+        self.root_partition_uuid = uuid
+
+    def get_root_partition_uuid(self):
+        """
+        Return preserved PARTUUID
+        """
+        return self.root_partition_uuid
+
     def _used_profiles(self, profiles=None):
         """
         return list of profiles to use. The method looks up the
@@ -1966,6 +1994,15 @@ class XMLState:
                 if history[0].get_author():
                     container_history['history']['author'] = \
                         history[0].get_author()
+                if history[0].get_launcher():
+                    container_history['history']['launcher'] = \
+                        history[0].get_launcher()
+                if history[0].get_application_id():
+                    container_history['history']['application_id'] = \
+                        history[0].get_application_id()
+                if history[0].get_package_version():
+                    container_history['history']['package_version'] = \
+                        history[0].get_package_version()
                 container_history['history']['comment'] = \
                     history[0].get_valueOf_()
         return container_history

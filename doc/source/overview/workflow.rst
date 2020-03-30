@@ -1,7 +1,7 @@
 Basic Workflow
 ==============
 
-.. hint:: **Abstract**
+.. note:: **Abstract**
 
     Installation of a Linux system generally occurs by booting the target
     system from an installation source such as an installation CD/DVD, a live
@@ -23,7 +23,7 @@ system within a file. The image represents an operational system and,
 optionally, contains the "final" configuration.
 
 The behavior of the image upon deployment varies depending on the image type
-and the image configuration since KIWI allows you to completely customize
+and the image configuration since {kiwi} allows you to completely customize
 the initial start-up behavior of the image. Among others, this includes
 images that:
 
@@ -32,7 +32,7 @@ images that:
 * automatically configure themselves in a known target environment.
 * prompt the user for an interactive system configuration.
 
-The image creation process with KIWI is automated and does not require any
+The image creation process with {kiwi} is automated and does not require any
 user interaction. The information required for the image creation process is
 provided by the primary configuration file named :file:`config.xml`.
 This file is validated against the schema documented in
@@ -40,7 +40,7 @@ This file is validated against the schema documented in
 In addition, the image can optionally be customized
 using the :file:`config.sh` and :file:`images.sh` scripts
 and by using an *overlay tree (directory)* called :file:`root`.
-See `Components of an Image Description`_ section for further details.
+See :ref:`description_components` section for further details.
 
 .. note:: Previous Knowledge
 
@@ -53,8 +53,8 @@ See `Components of an Image Description`_ section for further details.
 Components of an Image Description
 ----------------------------------
 
-A KIWI image description can composed by several parts. The main part is
-the KIWI description file itself (named :file:`config.xml` or an arbitrary
+A {kiwi} image description can composed by several parts. The main part is
+the {kiwi} description file itself (named :file:`config.xml` or an arbitrary
 name plus the :file:`*.kiwi` extension). The configuration XML is the
 only required component, others are optional.
 

@@ -1,6 +1,7 @@
 from mock import (
     patch, call, Mock
 )
+from collections import namedtuple
 
 from kiwi.boot.image.dracut import BootImageDracut
 from kiwi.xml_description import XMLDescription
@@ -8,11 +9,16 @@ from kiwi.xml_state import XMLState
 
 
 class TestBootImageKiwi:
+    @patch('kiwi.boot.image.dracut.Command.run')
     @patch('kiwi.boot.image.base.os.path.exists')
     @patch('platform.machine')
-    def setup(self, mock_machine, mock_exists):
+    def setup(self, mock_machine, mock_exists, mock_cmd):
         mock_machine.return_value = 'x86_64'
         mock_exists.return_value = True
+        command_type = namedtuple('command', ['output'])
+        mock_cmd.return_value = command_type(
+            output='foo\nfoobar\nmodule'
+        )
         description = XMLDescription('../data/example_config.xml')
         self.xml_state = XMLState(
             description.load()
@@ -20,17 +26,16 @@ class TestBootImageKiwi:
         self.boot_image = BootImageDracut(
             self.xml_state, 'some-target-dir', 'system-directory'
         )
+        mock_cmd.assert_called_once_with([
+            'chroot', 'system-directory', 'dracut',
+            '--list-modules', '--no-kernel'
+        ])
 
     @patch('kiwi.boot.image.dracut.SystemSetup')
-    @patch('kiwi.boot.image.dracut.Profile')
-    def test_prepare(self, mock_profile, mock_setup):
+    def test_prepare(self, mock_setup):
         setup = Mock()
-        profile = Mock()
-        profile.dot_profile = dict()
-        mock_profile.return_value = profile
         mock_setup.return_value = setup
         self.boot_image.prepare()
-        setup.import_shell_environment.assert_called_once_with(profile)
         setup.setup_machine_id.assert_called_once_with()
         assert self.boot_image.dracut_options == [
             '--install', '/.profile'
@@ -50,6 +55,7 @@ class TestBootImageKiwi:
 
         self.boot_image.include_module('module', install_media=True)
         self.boot_image.include_module('foobar')
+        self.boot_image.include_module('not_available')
         assert self.boot_image.modules == ['foobar']
         assert self.boot_image.install_modules == ['module']
 
@@ -104,9 +110,13 @@ class TestBootImageKiwi:
     @patch('kiwi.boot.image.dracut.Kernel')
     @patch('kiwi.boot.image.dracut.Command.run')
     @patch('kiwi.boot.image.base.BootImageBase.is_prepared')
+    @patch('kiwi.boot.image.dracut.Profile')
     def test_create_initrd(
-        self, mock_prepared, mock_command, mock_kernel
+        self, mock_Profile, mock_prepared, mock_command, mock_kernel
     ):
+        profile = Mock()
+        profile.dot_profile = dict()
+        mock_Profile.return_value = profile
         kernel = Mock()
         kernel_details = Mock()
         kernel_details.version = '1.2.3'
@@ -119,6 +129,9 @@ class TestBootImageKiwi:
         self.boot_image.include_module('foo')
         self.boot_image.omit_module('bar')
         self.boot_image.create_initrd()
+        profile.create.assert_called_once_with(
+            'system-directory/.profile'
+        )
         assert mock_command.call_args_list == [
             call([
                 'chroot', 'system-directory',

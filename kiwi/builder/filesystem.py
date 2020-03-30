@@ -41,6 +41,7 @@ class FileSystemBuilder:
     **Filesystem image builder**
 
     :param str label: filesystem label
+    :param str root_uuid: UUID of the created filesystem (on block device only)
     :param str root_dir: root directory path name
     :param str target_dir: target directory path name
     :param str requested_image_type: configured image type
@@ -57,6 +58,7 @@ class FileSystemBuilder:
     """
     def __init__(self, xml_state, target_dir, root_dir):
         self.label = None
+        self.root_uuid = None
         self.root_dir = root_dir
         self.target_dir = target_dir
         self.requested_image_type = xml_state.get_build_type_name()
@@ -73,6 +75,10 @@ class FileSystemBuilder:
             'mount_options': xml_state.get_fs_mount_option_list(),
             'create_options': xml_state.get_fs_create_option_list()
         }
+        if self.requested_filesystem == 'squashfs':
+            self.filesystem_custom_parameters['compression'] = \
+                xml_state.build_type.get_squashfscompression()
+
         self.system_setup = SystemSetup(
             xml_state=xml_state, root_dir=self.root_dir
         )
@@ -167,6 +173,7 @@ class FileSystemBuilder:
             self.root_dir + os.sep, self.filesystem_custom_parameters
         )
         filesystem.create_on_device(self.label)
+        self.root_uuid = loop_provider.get_uuid(loop_provider.get_device())
         log.info(
             '--> Syncing data to filesystem on %s', loop_provider.get_device()
         )

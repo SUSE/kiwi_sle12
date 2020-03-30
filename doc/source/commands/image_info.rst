@@ -1,19 +1,23 @@
-kiwi image info
-===============
+kiwi-ng image info
+==================
+
+.. _db_image_info_synopsis:
 
 SYNOPSIS
 --------
 
 .. code:: bash
 
-   kiwi [global options] service <command> [<args>]
+   kiwi-ng [global options] service <command> [<args>]
 
-   kiwi image info -h | --help
-   kiwi image info --description=<directory>
+   kiwi-ng image info -h | --help
+   kiwi-ng image info --description=<directory>
        [--resolve-package-list]
        [--ignore-repos]
        [--add-repo=<source,type,alias,priority>...]
-   kiwi image info help
+   kiwi-ng image info help
+
+.. _db_image_info_desc:
 
 DESCRIPTION
 -----------
@@ -27,6 +31,7 @@ will cause a dependency resolver to run over the list of
 packages and thus provides more detailed information about
 the image description.
 
+.. _db_image_info_opts:
 
 OPTIONS
 -------

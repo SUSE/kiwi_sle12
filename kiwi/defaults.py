@@ -221,6 +221,22 @@ class Defaults:
         ]
         return exclude_list
 
+    def get_exclude_list_for_non_physical_devices():
+        """
+        Provides the list of folders that are not associated
+        with a physical device. KIWI returns the basename of
+        the folders typically used as mountpoint for those
+        devices.
+
+        :return: list of file and directory names
+
+        :rtype: list
+        """
+        exclude_list = [
+            'proc', 'sys', 'dev'
+        ]
+        return exclude_list
+
     @staticmethod
     def get_failsafe_kernel_options():
         """
@@ -343,10 +359,7 @@ class Defaults:
 
         :rtype: str
         """
-        chroot_env = {
-            'PATH': os.sep.join([lookup_path, 'usr', 'sbin'])
-        }
-        if Path.which(filename='grub2-install', custom_env=chroot_env):
+        if Path.which(filename='grub2-install', root_dir=lookup_path):
             # the presence of grub2-install is an indicator to put all
             # grub2 data below boot/grub2
             return 'grub2'
@@ -1083,7 +1096,7 @@ class Defaults:
 
         :rtype: list
         """
-        return ['docker', 'oci']
+        return ['docker', 'oci', 'appx']
 
     @staticmethod
     def get_filesystem_image_types():
@@ -1336,7 +1349,7 @@ class Defaults:
 
         :rtype: str
         """
-        return 'cdrtools'
+        return 'xorriso'
 
     @staticmethod
     def get_container_compression():
@@ -1481,6 +1494,12 @@ class Defaults:
         """
         if key in self.defaults:
             return self.defaults[key]
+
+    def get_profile_file(root_dir):
+        """
+        Return name of profile file for given root directory
+        """
+        return root_dir + '/.profile'
 
     def to_profile(self, profile):
         """

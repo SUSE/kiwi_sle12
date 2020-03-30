@@ -361,6 +361,10 @@ function get_remote_image_source_files {
     image_kernel_uri=$(
         echo "${image_uri}" | awk '{ gsub("\\.xz",".kernel", $1); print $1 }'
     )
+    image_config_uri=$(
+        echo "${image_uri}" | \
+        awk '{ gsub("\\.xz",".config.bootoptions", $1); print $1 }'
+    )
 
     # if we can not access image_md5_uri, maybe network setup
     # by dracut did fail, so collect some additional info
@@ -384,34 +388,13 @@ function get_remote_image_source_files {
             "Failed to fetch ${image_initrd_uri}, see /tmp/fetch.info"
     fi
 
-    echo "${image_uri}|${image_md5}"
-}
+    if ! fetch_file "${image_config_uri}" > "/config.bootoptions"
+    then
+        report_and_quit \
+            "Failed to fetch ${image_config_uri}, see /tmp/fetch.info"
+    fi
 
-function boot_installed_system {
-    local boot_options
-    # if rd.kiwi.install.pass.bootparam is given, pass on most
-    # boot options to the kexec kernel
-    if getargbool 0 rd.kiwi.install.pass.bootparam; then
-        local cmdline
-        local option
-        read -r cmdline < /proc/cmdline
-        for option in ${cmdline}; do
-            case ${option} in
-                rd.kiwi.*) ;; # skip all rd.kiwi options, they might do harm
-                *)  boot_options="${boot_options}${option} ";;
-            esac
-        done
-    fi
-    boot_options="${boot_options}$(cat /config.bootoptions)"
-    if getargbool 0 rd.kiwi.debug; then
-        boot_options="${boot_options} rd.kiwi.debug"
-    fi
-    kexec -l /run/install/boot/*/loader/linux \
-        --initrd /run/install/initrd.system_image \
-        --command-line "${boot_options}"
-    if ! kexec -e; then
-        report_and_quit "Failed to kexec boot system"
-    fi
+    echo "${image_uri}|${image_md5}"
 }
 
 #======================================
@@ -440,15 +423,3 @@ else
 fi
 
 check_image_integrity "${image_target}"
-
-if getargbool 0 rd.kiwi.ramdisk; then
-    # For ramdisk deployment a kexec boot is not possible as it
-    # will wipe the contents of the ramdisk. Therefore we prepare
-    # the switch_root from this deployment initrd. Also see the
-    # unit generator: dracut-kiwi-ramdisk-generator
-    kpartx -s -a "${image_target}"
-else
-    # Standard deployment will use kexec to activate and boot the
-    # deployed system
-    boot_installed_system
-fi

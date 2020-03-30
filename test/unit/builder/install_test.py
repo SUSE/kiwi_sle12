@@ -150,6 +150,10 @@ class TestInstallImageBuilder:
             call('IMAGE="result-image.raw"\n'),
             call('IMAGE="result-image.raw"\n')
         ]
+        kiwi.builder.install.FileSystemSquashFs.assert_called_once_with(
+            custom_args={'compression': mock.ANY},
+            device_provider=None, root_dir='temp-squashfs'
+        )
         self.squashed_image.create_on_file.assert_called_once_with(
             'target_dir/result-image.raw.squashfs'
         )
@@ -204,8 +208,11 @@ class TestInstallImageBuilder:
         with patch('builtins.open', m_open, create=True):
             self.install_image.create_install_iso()
 
-        self.boot_image_task.include_module.assert_called_once_with(
+        self.boot_image_task.include_module.assert_any_call(
             'kiwi-dump', install_media=True
+        )
+        self.boot_image_task.include_module.assert_any_call(
+            'kiwi-dump-reboot', install_media=True
         )
         self.boot_image_task.omit_module.assert_called_once_with(
             'multipath', install_media=True
@@ -362,18 +369,22 @@ class TestInstallImageBuilder:
         archive.create.assert_called_once_with('tmpdir')
 
         mock_chmod.reset_mock()
+        mock_copy.reset_mock()
         self.install_image.initrd_system = 'dracut'
         m_open.reset_mock()
         with patch('builtins.open', m_open, create=True):
             self.install_image.create_install_pxe_archive()
 
-        self.boot_image_task.include_file.assert_called_once_with(
-            '/config.bootoptions', install_media=True
-        )
-        mock_copy.assert_called_once_with(
-            'root_dir/boot/initrd-kernel_version',
-            'tmpdir/result-image.x86_64-1.2.3.initrd'
-        )
+        assert mock_copy.call_args_list == [
+            call(
+                'root_dir/boot/initrd-kernel_version',
+                'tmpdir/result-image.x86_64-1.2.3.initrd'
+            ),
+            call(
+                'root_dir/config.bootoptions',
+                'tmpdir/result-image.x86_64-1.2.3.config.bootoptions'
+            )
+        ]
         assert mock_chmod.call_args_list == [
             call('tmpdir/result-image.x86_64-1.2.3.initrd', 420),
             call('tmpdir/pxeboot.result-image.x86_64-1.2.3.initrd.xz', 420)
@@ -391,8 +402,11 @@ class TestInstallImageBuilder:
             )
         ]
 
-        self.boot_image_task.include_module.assert_called_once_with(
+        self.boot_image_task.include_module.assert_any_call(
             'kiwi-dump', install_media=True
+        )
+        self.boot_image_task.include_module.assert_any_call(
+            'kiwi-dump-reboot', install_media=True
         )
         self.boot_image_task.omit_module.assert_called_once_with(
             'multipath', install_media=True

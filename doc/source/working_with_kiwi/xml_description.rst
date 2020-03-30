@@ -4,7 +4,7 @@ The Image Description
 =====================
 
 The image description is a XML file that defines properties of the
-appliance that will be build by KIWI, for example:
+appliance that will be build by {kiwi}, for example:
 
 - image type (e.g. QEMU disk image, PXE bootable image, Vagrant box, etc.)
 - partition layout
@@ -56,7 +56,7 @@ above example):
 
 - `name`: A name for this image that must not contain spaces or `/`.
 
-- `schemaversion`: The used version of the [KIWI] RNG schema. KIWI will
+- `schemaversion`: The used version of the RNG schema. {kiwi} will
   automatically convert your image description from an older schema
   version to the most recent one (it will perform this only internally and
   won't modify your :file:`config.xml`).
@@ -100,7 +100,7 @@ image:
 
 The `description` element must always contain a `type` attribute. This
 attribute accepts the values `system` or `boot`. The value `boot` is used
-by the KIWI developers and is not relevant for the end user, thus `type`
+by the {kiwi} developers and is not relevant for the end user, thus `type`
 should be always set to `system`.
 
 `description` allows the following optional children:
@@ -121,18 +121,14 @@ The `preferences` Element
 The mandatory `preferences` element contains the definition of the various
 enabled image types (so-called build types). Each of these build types can
 be supplied with attributes specific to that image type, which we described
-in the section :ref:`xml-description-build-types`.
+in the section :ref:`build-types`.
 
-The elements that are not image type specific are presented afterwards in
-section :ref:`xml-description-preferences-common-elements`.
-
-
-.. _xml-description-build-types:
+.. _build-types:
 
 Build Types
 -----------
 
-A build type defines the type of an appliance that is produced by KIWI, for
+A build type defines the type of an appliance that is produced by {kiwi}, for
 instance, a live ISO image or a virtual machine disk.
 
 For example, a live ISO image is specified as follows:
@@ -185,10 +181,10 @@ a virtual machine disk of the same appliance:
    </image>
 
 Note the additional attribute `primary` in the Live ISO image build
-type. KIWI will by default build the image which `primary` attribute is set
+type. {kiwi} will by default build the image which `primary` attribute is set
 to `true`.
 
-KIWI supports the following values for the `image` attribute (further
+{kiwi} supports the following values for the `image` attribute (further
 attributes of the `type` element are documented inside the referenced
 sections):
 
@@ -201,7 +197,7 @@ sections):
 
 - `docker`, `oci`: container images, see :ref:`building-docker-build`
 
-- `btrfs`, `ext2`, `ext3`, `ext4`, `xfs`: KIWI will convert the
+- `btrfs`, `ext2`, `ext3`, `ext4`, `xfs`: {kiwi} will convert the
   image into a mountable filesystem of the specified type.
 
 - `squashfs`, `clicfs`: creates the image as a filesystem that can be used
@@ -223,7 +219,7 @@ above, `oemconfig` is a subelement of `<type image="oem" ...>`):
 
 - `pxedeploy`: settings for PXE booting, see :ref:`build_pxe`
 
-- `vagrantconfig`: instructs KIWI to build a Vagrant box instead of a
+- `vagrantconfig`: instructs {kiwi} to build a Vagrant box instead of a
   standard virtual machine image, see :ref:`setup_vagrant`
 
 - `systemdisk`: used to define LVM or Btrfs (sub)volumens, see
@@ -256,18 +252,18 @@ build types and will be covered here:
   makes sense to set this value to `0` for images intended to be started
   non-interactively (e.g. virtual machines).
 
-- `bootpartition`: Boolean parameter notifying KIWI whether an extra boot
+- `bootpartition`: Boolean parameter notifying {kiwi} whether an extra boot
   partition should be used or not (the default depends on the current
-  layout). This will override KIWI's default layout.
+  layout). This will override {kiwi}'s default layout.
 
 - `btrfs_quota_groups`: Boolean parameter to activate filesystem quotas if
   the filesystem is `btrfs`. By default quotas are inactive.
 
-- `btrfs_root_is_snapshot`: Boolean parameter that tells KIWI to install
+- `btrfs_root_is_snapshot`: Boolean parameter that tells {kiwi} to install
   the system into a btrfs snapshot. The snapshot layout is compatible with
   snapper. By default snapshots are turned off.
 
-- `btrfs_root_is_readonly_snapshot`: Boolean parameter notifying KIWI that
+- `btrfs_root_is_readonly_snapshot`: Boolean parameter notifying {kiwi} that
   the btrfs root filesystem snapshot has to made read-only. if this option
   is set to true, the root filesystem snapshot it will be turned into
   read-only mode, once all data has been placed to it. The option is only
@@ -308,7 +304,7 @@ build types and will be covered here:
   :file:`/etc/fstab`.
 
 - `fscreateoptions`: Specifies the filesystem options used to create the
-  filesystem. In KIWI the filesystem utility to create a filesystem is
+  filesystem. In {kiwi} the filesystem utility to create a filesystem is
   called without any custom options. The default options are filesystem
   specific and are provided along with the package that provides the
   filesystem utility. For the Linux `ext[234]` filesystem, the default
@@ -318,7 +314,7 @@ build types and will be covered here:
   :command:`man mke2fs`. With the `fscreateoptions` attribute it's possible
   to directly influence how the filesystem will be created. The options
   provided as a string are passed to the command that creates the
-  filesystem without any further validation by KIWI. For example, to turn
+  filesystem without any further validation by {kiwi}. For example, to turn
   off the journal on creation of an ext4 filesystem the following option
   would be required:
 
@@ -334,7 +330,7 @@ build types and will be covered here:
   password. Note that the password must be entered when booting the
   appliance!
 
-- `primary`: Boolean option, KIWI will by default build the image which
+- `primary`: Boolean option, {kiwi} will by default build the image which
   `primary` attribute is set to `true`.
 
 - `target_blocksize`: Specifies the image blocksize in bytes which has to
@@ -346,8 +342,6 @@ build types and will be covered here:
 
      blockdev --report $DEVICE
 
-
-.. _xml-description-preferences-common-elements:
 
 Common Elements
 ---------------
@@ -363,7 +357,7 @@ remaining child-elements of `preferences`:
 - `packagemanager`: Specify the package manager that will be used to download
   and install the packages for your appliance. Currently the following package
   managers are supported: ``apt-get``, ``zypper`` and ``dnf``. Note that the
-  package manager must be installed on the system **calling** KIWI, it is
+  package manager must be installed on the system **calling** {kiwi}, it is
   **not** sufficient to install it inside the appliance.
 
 - `locale`: Specify the locale that the resulting appliance will use.
@@ -411,7 +405,7 @@ An example excerpt from a image description using these child-elements of
        <!-- snip -->
    </image>
 
-.. _xml-description-image-profiles:
+.. _image-profiles:
 
 Image Profiles
 ==============
@@ -425,11 +419,11 @@ attribute `image`.
 
 In certain cases this is undesirable, for instance when building multiple
 very similar virtual machine disks. Then one would have to duplicate the
-whole :file:`config.xml` for each virtual machine. KIWI supports *profiles*
+whole :file:`config.xml` for each virtual machine. {kiwi} supports *profiles*
 to work around this issue.
 
 A *profile* is a namespace for additional settings that can be applied by
-KIWI on top of the default settings (or other profiles), thereby allowing
+{kiwi} on top of the default settings (or other profiles), thereby allowing
 to build multiple appliances with the same build type but with different
 configurations.
 
@@ -461,10 +455,10 @@ format).
 Each profile is declared via the element `profile`, which itself must be a
 child of `profiles` and must contain the `name` and `description`
 attributes. The `description` is only present for documentation purposes,
-`name` on the other hand is used to instruct KIWI which profile to build
+`name` on the other hand is used to instruct {kiwi} which profile to build
 via the command line. Additionally, one can provide the boolean attribute
 `import`, which defines whether this profile should be used by default when
-KIWI is invoked via the command line.
+{kiwi} is invoked via the command line.
 
 A profile inherits the default settings which do not belong to any
 profile. It applies only to elements that contain the profile in their
@@ -475,7 +469,7 @@ attribute is present in the following elements only:
 - `preferences`
 - `drivers`
 - `repository` and `packages` (see
-  :ref:`xml-description-repositories-and-packages`)
+  :ref:`repositories-and-packages`)
 - `users`
 
 Profiles can furthermore inherit settings from another profile via the
@@ -493,10 +487,10 @@ Profiles can furthermore inherit settings from another profile via the
 The profile `QEMU` would inherit the settings from `VM` in the above
 example.
 
-We cover the usage of *profiles* when invoking KIWI and when building in
+We cover the usage of *profiles* when invoking {kiwi} and when building in
 the Open Build Service in :ref:`building-build-with-profiles`.
 
-.. _xml-description-adding-users:
+.. _adding-users:
 
 Adding Users
 ============
@@ -553,7 +547,7 @@ Additionally, the following optional attributes can be specified:
 
 
 The `users` element furthermore accepts a list of profiles (see
-:ref:`xml-description-image-profiles`) to which it applies via the
+:ref:`image-profiles`) to which it applies via the
 `profiles` attribute, as shown in the following example:
 
 .. code:: xml
@@ -588,22 +582,22 @@ Here the settings for the root user are shared among all appliances. The
 configuration of the `devel` user on the other hand depends on the profile.
 
 
-.. _xml-description-repositories-and-packages:
+.. _repositories-and-packages:
 
 Defining Repositories and Adding or Removing Packages
 =====================================================
 
 A crucial part of each appliance is the package and repository
-selection. KIWI allows the end user to completely customize the selection
+selection. {kiwi} allows the end user to completely customize the selection
 of repositories and packages via the `repository` and `packages` elements.
 
 
 Adding repositories
 -------------------
 
-KIWI installs packages into your appliance from the repositories defined in
+{kiwi} installs packages into your appliance from the repositories defined in
 the image description. Therefore at least one repository **must** be
-defined, as KIWI will otherwise not be able to fetch any packages.
+defined, as {kiwi} will otherwise not be able to fetch any packages.
 
 A repository is added to the description via the `repository` element,
 which is a child of the top-level `image` element:
@@ -622,7 +616,7 @@ which is a child of the top-level `image` element:
 
 In the above snippet we defined two repositories:
 
-1. The repository belonging to the KIWI project:
+1. The repository belonging to the {kiwi} project:
    *{exc_kiwi_repo}* at the Open Build Service (OBS)
 
 2. The RPM repository belonging to the OS project:
@@ -651,7 +645,7 @@ following optional attributes:
 
 - `alias`: Name to be used for this repository, it will appear as the
   repository's name in the image, which is visible via ``zypper repos`` or
-  ``dnf repolist``. KIWI will construct an alias from the path in the
+  ``dnf repolist``. {kiwi} will construct an alias from the path in the
   `source` child element (replacing each `/` with a `_`), if no value is
   given.
 
@@ -670,13 +664,13 @@ following optional attributes:
 
 - `profiles`: List of profiles to which this repository applies.
 
-.. _xml-description-supported-supported-repository-paths:
+.. _supported-supported-repository-paths:
 
 Supported repository paths
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The actual location of a repository is specified in the `source` child
-element of `repository` via its only attribute `path`. KIWI supports the
+element of `repository` via its only attribute `path`. {kiwi} supports the
 following paths types:
 
 - `http://URL` or `https://URL` or `ftp://URL`: a URL to the repository
@@ -684,17 +678,16 @@ following paths types:
 
 - `obs://$PROJECT/$REPOSITORY`: evaluates to the repository `$REPOSITORY`
   of the project `$PROJECT` available on the Open Build Service (OBS). By
-  default KIWI will look for projects on `build.opensuse.org
+  default {kiwi} will look for projects on `build.opensuse.org
   <https://build.opensuse.org>`_, but this can be overridden using the
-  runtime configuration file (see :ref:`The Runtime Configuration
-  File<working-with-kiwi-runtime-configuration-file>`).
+  runtime configuration file (see :ref:`runtime_config`).
   Note that it is not possible to add repositories using the `obs://` path
   from **different** OBS instances (use direct URLs to the :file:`.repo`
   file instead in this case).
 
 - `obsrepositories:/`: special path only available for builds using the
   Open Build Service. The repositories configured for the OBS project in
-  which the KIWI image resides will be available inside the appliance. This
+  which the {kiwi} image resides will be available inside the appliance. This
   allows you to configure the repositories of your image from OBS itself
   and not having to modify the image description.
 
@@ -703,11 +696,11 @@ following paths types:
   appliance.
 
 - `iso:///path/to/image.iso`: the specified ISO image will be mounted
-  during the build of the KIWI image and a repository will be created
+  during the build of the {kiwi} image and a repository will be created
   pointing to the mounted ISO.
 
 
-.. _xml-description-adding-and-removing-packages:
+.. _adding-and-removing-packages:
 
 Adding and removing packages
 ----------------------------
@@ -733,7 +726,7 @@ removed via individual `package` child elements:
    </image>
 
 The `packages` element provides a collection of different child elements
-that instruct KIWI when and how to perform package installation or
+that instruct {kiwi} when and how to perform package installation or
 removal. Each `packages` element acts as a group, whose behavior can be
 configured via the following attributes:
 
@@ -747,22 +740,22 @@ configured via the following attributes:
   chroot into the new root file system.
 
   Packages in `type="delete"` and `type="uninstall"` are removed from the
-  image, for details see :ref:`xml-description-uninstall-system-packages`.
+  image, for details see :ref:`uninstall-system-packages`.
 
   And packages which belong to a build type are only installed when that
-  specific build type is currently processed by KIWI.
+  specific build type is currently processed by {kiwi}.
 
 - `profiles`: a list of profiles to which this package selection applies
-  (see :ref:`xml-description-image-profiles`).
+  (see :ref:`image-profiles`).
 
 - `patternType`: selection type for patterns, supported values are:
   `onlyRequired`, `plusRecommended`, see:
-  :ref:`xml-description-product-and-namedCollection-element`.
+  :ref:`product-and-namedCollection-element`.
 
 We will describe the different child elements of `packages` in the following
 sections.
 
-.. _xml-description-package-element:
+.. _package-element:
 
 The `package` element
 ^^^^^^^^^^^^^^^^^^^^^
@@ -799,11 +792,11 @@ capability (e.g. `Provides: /usr/bin/my-binary`) via:
 
 Whether this works depends on the package manager and on the environment
 that is being used. In the Open Build Service, certain `Provides` either
-are not visible or cannot be properly extracted from the KIWI
+are not visible or cannot be properly extracted from the {kiwi}
 description. Therefore, relying on `Provides` is not recommended.
 
 Packages can also be included only on specific architectures via the `arch`
-attribute. KIWI compares the `arch` attributes value with the output of
+attribute. {kiwi} compares the `arch` attributes value with the output of
 `uname -m`.
 
 .. code:: xml
@@ -821,15 +814,15 @@ which results in `grub2-x86_64-efi` and `shim` being only installed on 64
 Bit images, but GRUB2 also on 32 Bit images.
 
 
-.. _xml-description-archive-element:
+.. _archive-element:
 
 The `archive` element
 ^^^^^^^^^^^^^^^^^^^^^
 
 It is sometimes necessary to include additional packages into the image
-which are not available in the package manager's native format. KIWI
+which are not available in the package manager's native format. {kiwi}
 supports the inclusion of ordinary archives via the `archive` element,
-whose `name` attribute specifies the filename of the archive (KIWI looks
+whose `name` attribute specifies the filename of the archive ({kiwi} looks
 for the archive in the image description folder).
 
 .. code:: xml
@@ -839,19 +832,19 @@ for the archive in the image description folder).
        <archive name="custom-program2.tar"/>
    </packages>
 
-KIWI will extract the archive into the root directory of the image using
+{kiwi} will extract the archive into the root directory of the image using
 `GNU tar <https://www.gnu.org/software/tar/>`_, thus only archives
 supported by it can be included. When multiple `archive` elements are
 specified then they will be applied in a top to bottom order. If a file is
 already present in the image, then the file from the archive will overwrite
 it (same as with the image overlay).
 
-.. _xml-description-uninstall-system-packages:
+.. _uninstall-system-packages:
 
 Uninstall System Packages
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-KIWI supports two different methods how packages can be removed from the
+{kiwi} supports two different methods how packages can be removed from the
 appliance:
 
 1. Packages present as a child element of `<packages type="uninstall">`
@@ -932,12 +925,12 @@ partitioning tools (`parted` or `fdisk`). All networking tools can be
 safely uninstalled in images for embedded devices without a network
 connection.
 
-.. _xml-description-product-and-namedCollection-element:
+.. _product-and-namedCollection-element:
 
 The `product` and `namedCollection` element
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-KIWI supports the inclusion of openSUSE products or of namedCollections
+{kiwi} supports the inclusion of openSUSE products or of namedCollections
 (*patterns* in SUSE based distributions or *groups* for RedHat based
 distributions). These can be added via the `product` and `namedCollection`
 child elements, which both take the mandatory `name` attribute and the
@@ -985,7 +978,7 @@ in the following example:
 Packages can be marked as ignored during the installation by adding a
 `ignore` child element with the mandatory `name` attribute set to the
 package's name. Optionally one can also specify the architecture via the
-`arch` similarly to :ref:`xml-description-package-element`.
+`arch` similarly to :ref:`package-element`.
 
 .. warning::
 

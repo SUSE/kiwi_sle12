@@ -89,7 +89,6 @@ class TestSystemSetup:
             '../data/config-cdroot.tar*'
         )
         assert mock_command.call_args_list == [
-            call(['mkdir', '-p', 'root_dir/image']),
             call(['cp', '../data/config.sh', 'root_dir/image/config.sh']),
             call([
                 'cp', '../data/my_edit_boot_script',
@@ -109,10 +108,11 @@ class TestSystemSetup:
             call(['cp', 'config-cdroot.tar.xz', 'root_dir/image/'])
         ]
 
+    @patch('kiwi.path.Path.create')
     @patch('kiwi.command.Command.run')
     @patch('os.path.exists')
     def test_import_description_archive_from_derived(
-        self, mock_path, mock_command
+        self, mock_path, mock_command, mock_create
     ):
         path_return_values = [
             True, False, True, True, True, True, True
@@ -127,7 +127,6 @@ class TestSystemSetup:
             self.setup_with_real_xml.import_description()
 
         assert mock_command.call_args_list == [
-            call(['mkdir', '-p', 'root_dir/image']),
             call(['cp', '../data/config.sh', 'root_dir/image/config.sh']),
             call([
                 'cp', '../data/my_edit_boot_script',
@@ -147,6 +146,7 @@ class TestSystemSetup:
                 'cp', 'derived/description/bootstrap.tgz', 'root_dir/image/'
             ])
         ]
+        mock_create.assert_called_once_with('root_dir/image')
 
     @patch('kiwi.command.Command.run')
     @patch('os.path.exists')
@@ -184,20 +184,6 @@ class TestSystemSetup:
         mock_command.assert_called_once_with(
             ['rm', '-r', '-f', '/.kconfig', '/image']
         )
-
-    def test_import_shell_environment(self):
-        mock_profile = MagicMock()
-        mock_profile.create = Mock(
-            return_value=['a']
-        )
-
-        m_open = mock_open()
-        with patch('builtins.open', m_open, create=True):
-            self.setup.import_shell_environment(mock_profile)
-
-        mock_profile.create.assert_called_once_with()
-        m_open.assert_called_once_with('root_dir/.profile', 'w')
-        m_open.return_value.write.assert_called_once_with('a\n')
 
     @patch('kiwi.system.setup.ArchiveTar')
     @patch('kiwi.system.setup.glob.iglob')
@@ -372,7 +358,6 @@ class TestSystemSetup:
         self.setup.preferences['timezone'] = 'timezone'
         self.setup.setup_timezone()
         mock_command.assert_has_calls([
-            call(['rm', '-r', '-f', 'root_dir/etc/localtime']),
             call([
                 'chroot', 'root_dir', 'systemd-firstboot',
                 '--timezone=timezone'
@@ -504,7 +489,7 @@ class TestSystemSetup:
         )
         self.setup.setup_plymouth_splash()
         mock_which.assert_called_once_with(
-            custom_env={'PATH': 'root_dir/usr/sbin'},
+            root_dir='root_dir',
             filename='plymouth-set-default-theme'
         )
         mock_command.assert_called_once_with(
@@ -693,19 +678,23 @@ class TestSystemSetup:
     @patch('os.path.exists')
     @patch('kiwi.system.setup.Path.wipe')
     @patch('kiwi.command.Command.run')
-    def test_create_fstab(self, mock_command, mock_wipe, mock_exists):
+    def test_create_fstab(
+        self, mock_command, mock_wipe, mock_exists
+    ):
+        fstab = Mock()
         mock_exists.return_value = True
 
         m_open = mock_open(read_data='append_entry')
         with patch('builtins.open', m_open, create=True):
-            self.setup.create_fstab(['fstab_entry'])
+            self.setup.create_fstab(fstab)
+
+        fstab.export.assert_called_once_with('root_dir/etc/fstab')
 
         assert m_open.call_args_list == [
-            call('root_dir/etc/fstab', 'w'),
+            call('root_dir/etc/fstab', 'a'),
             call('root_dir/etc/fstab.append', 'r')
         ]
         assert m_open.return_value.write.call_args_list == [
-            call('fstab_entry\n'),
             call('append_entry')
         ]
         assert mock_command.call_args_list == [
@@ -831,7 +820,8 @@ class TestSystemSetup:
         with patch('builtins.open') as m_open:
             result = self.setup.export_package_list('target_dir')
             m_open.assert_called_once_with(
-                'target_dir/some-image.x86_64-1.2.3.packages', 'w'
+                'target_dir/some-image.x86_64-1.2.3.packages', 'w',
+                encoding='utf-8'
             )
 
         assert result == 'target_dir/some-image.x86_64-1.2.3.packages'
@@ -899,7 +889,8 @@ class TestSystemSetup:
         with patch('builtins.open') as m_open:
             result = self.setup.export_package_list('target_dir')
             m_open.assert_called_once_with(
-                'target_dir/some-image.x86_64-1.2.3.packages', 'w'
+                'target_dir/some-image.x86_64-1.2.3.packages', 'w',
+                encoding='utf-8'
             )
 
         assert result == 'target_dir/some-image.x86_64-1.2.3.packages'
@@ -934,7 +925,8 @@ class TestSystemSetup:
         with patch('builtins.open') as m_open:
             result = self.setup.export_package_verification('target_dir')
             m_open.assert_called_once_with(
-                'target_dir/some-image.x86_64-1.2.3.verified', 'w'
+                'target_dir/some-image.x86_64-1.2.3.verified', 'w',
+                encoding='utf-8'
             )
 
         assert result == 'target_dir/some-image.x86_64-1.2.3.verified'
@@ -980,7 +972,8 @@ class TestSystemSetup:
         with patch('builtins.open') as m_open:
             result = self.setup.export_package_verification('target_dir')
             m_open.assert_called_once_with(
-                'target_dir/some-image.x86_64-1.2.3.verified', 'w'
+                'target_dir/some-image.x86_64-1.2.3.verified', 'w',
+                encoding='utf-8'
             )
 
         assert result == 'target_dir/some-image.x86_64-1.2.3.verified'
