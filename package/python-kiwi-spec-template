@@ -438,6 +438,7 @@ fi
 %{_bindir}/dcounter
 %{_bindir}/isconsole
 %{_bindir}/utimer
+%{_bindir}/kversion
 
 %files -n dracut-kiwi-lib
 %{_usr}/lib/dracut/modules.d/99kiwi-lib
