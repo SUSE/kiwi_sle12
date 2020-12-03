@@ -435,6 +435,17 @@ class TestXMLState:
         assert state.get_build_type_oemconfig_section().get_oem_swap()[0] is \
             True
 
+    def test_get_oemconfig_oem_multipath_scan(self):
+        xml_data = self.description.load()
+        state = XMLState(xml_data, ['vmxFlavour'], 'oem')
+        assert state.get_oemconfig_oem_multipath_scan() is False
+        description = XMLDescription(
+            '../data/example_disk_config.xml'
+        )
+        xml_data = description.load()
+        state = XMLState(xml_data)
+        assert state.get_oemconfig_oem_multipath_scan() is False
+
     def test_get_oemconfig_swap_mbytes(self):
         xml_data = self.description.load()
         state = XMLState(xml_data, ['xenFlavour'], 'docker')
