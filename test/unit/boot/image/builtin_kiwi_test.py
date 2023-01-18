@@ -112,7 +112,9 @@ class TestBootImageKiwi:
         mock_sync.assert_called_once_with(
             'boot-root-directory/', 'temp-boot-directory'
         )
-        data.sync_data.assert_called_once_with(options=['-a'])
+        data.sync_data.assert_called_once_with(
+                options=['-a', '-H', '-X', '-A', '--one-file-system']
+        )
         mock_cpio.assert_called_once_with(
             ''.join(
                 [
