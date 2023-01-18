@@ -17,12 +17,12 @@ setuptools
 tox
 
 # python unit testing framework
-pytest
+pytest < 7.0.0
 pytest-cov
 pytest-xdist
 
 # Rolling backport of unittest.mock for all Pythons
-mock
+mock < 5.0.0
 
 # Version-bump your software with a single command!
 bumpversion
@@ -38,7 +38,7 @@ flake8
 generateDS==2.29.24
 
 # for building documentation
-sphinx
+sphinx < 4.0.0
 
 git+https://github.com/openSUSE/rstxml2docbook.git@feature/kiwi
 
