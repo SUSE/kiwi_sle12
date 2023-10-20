@@ -56,8 +56,6 @@ class BootImageBase:
         self.initrd_filename = None
         self.boot_xml_state = None
         self.setup = None
-        self.temp_directories = []
-        self.call_destructor = True
         self.signing_keys = signing_keys
         self.boot_root_directory = root_dir
 
@@ -151,23 +149,10 @@ class BootImageBase:
         try:
             with open(filename, 'wb') as boot_image:
                 pickle.dump(self, boot_image)
-            self.disable_cleanup()
         except Exception as e:
             raise KiwiBootImageDumpError(
                 'Failed to pickle dump boot image: %s' % format(e)
             )
-
-    def disable_cleanup(self):
-        """
-        Deactivate cleanup(deletion) of boot root directory
-        """
-        self.call_destructor = False
-
-    def enable_cleanup(self):
-        """
-        Activate cleanup(deletion) of boot root directory
-        """
-        self.call_destructor = True
 
     def get_boot_names(self):
         """
@@ -381,6 +366,12 @@ class BootImageBase:
                     boot_description
             return boot_description
 
+    def cleanup(self):
+        """
+        Cleanup temporary boot image data if any
+        """
+        pass
+
     def _get_boot_image_output_file_format(self):
         """
         The initrd output file format varies between
@@ -416,10 +407,3 @@ class BootImageBase:
             default_outfile_format
         ))
         return default_outfile_format
-
-    def __del__(self):
-        if self.call_destructor:
-            log.info('Cleaning up %s instance', type(self).__name__)
-            for directory in self.temp_directories:
-                if directory and os.path.exists(directory):
-                    Path.wipe(directory)
